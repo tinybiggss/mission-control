@@ -1,7 +1,7 @@
 import { getVaultRoot } from '$lib/server/vault';
 import { listAllDrafts } from '$lib/server/drafts';
 import { listAllAdapted } from '$lib/server/adapted';
-import { groupAdaptedByDraft } from '$lib/server/grouping';
+import { groupAdaptedByDraft } from '$lib/grouping';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {

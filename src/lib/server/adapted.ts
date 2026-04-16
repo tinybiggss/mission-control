@@ -78,8 +78,10 @@ export async function updateAdaptedStatus(
 
   const raw = await readFile(version.filePath, 'utf-8');
   const parsed = matter(raw);
-  parsed.data.status = newStatus;
-  const output = serializeFrontmatter(parsed.data, parsed.content);
+  // gray-matter caches parsed results by content; clone data before mutating so we don't
+  // poison that cache entry (the cached object's `data` is shared across callers).
+  const data = { ...parsed.data, status: newStatus };
+  const output = serializeFrontmatter(data, parsed.content);
   await writeFile(version.filePath, output, 'utf-8');
 }
 
@@ -97,7 +99,7 @@ export async function updateAdaptedContent(
 
   const raw = await readFile(version.filePath, 'utf-8');
   const parsed = matter(raw);
-  parsed.data.character_count = newBody.trim().length;
-  const output = serializeFrontmatter(parsed.data, newBody);
+  const data = { ...parsed.data, character_count: newBody.trim().length };
+  const output = serializeFrontmatter(data, newBody);
   await writeFile(version.filePath, output, 'utf-8');
 }

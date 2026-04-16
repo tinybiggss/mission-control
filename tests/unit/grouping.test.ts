@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { groupAdaptedByDraft, filterGroups } from '../../src/lib/server/grouping';
+import { groupAdaptedByDraft, filterGroups } from '../../src/lib/grouping';
 import type { Draft, AdaptedVersion, DraftGroup } from '../../src/lib/types';
 
 const DRAFT_1: Draft = {

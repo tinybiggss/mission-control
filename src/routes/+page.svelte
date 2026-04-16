@@ -3,7 +3,7 @@
   import DraftCard from '$lib/components/DraftCard.svelte';
   import FilterBar from '$lib/components/FilterBar.svelte';
   import ToastMessage from '$lib/components/ToastMessage.svelte';
-  import { filterGroups } from '$lib/server/grouping';
+  import { filterGroups } from '$lib/grouping';
   import type { FilterState, AdaptedStatus } from '$lib/types';
   import type { PageData } from './$types';
 
