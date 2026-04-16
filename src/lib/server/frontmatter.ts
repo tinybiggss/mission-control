@@ -44,8 +44,25 @@ function asBoolean(value: unknown, fallback = false): boolean {
   return fallback;
 }
 
-export function parseDraftFile(content: string, filePath: string): Draft {
+/**
+ * gray-matter v4 has a buggy cache: the FIRST parse of malformed YAML throws,
+ * but subsequent calls with the same content return { data: {}, content: original }
+ * silently — defeating our try/catch-based skip logic. Detect this poisoned-cache
+ * state by checking whether the frontmatter markers were actually stripped.
+ */
+function parseMatterStrict(content: string) {
   const parsed = matter(content);
+  const stillHasFrontmatter = /^---\s*\r?\n/.test(parsed.content);
+  if (stillHasFrontmatter) {
+    throw new Error(
+      'gray-matter returned the original content without stripping frontmatter — YAML likely failed to parse (cache-poisoned state)'
+    );
+  }
+  return parsed;
+}
+
+export function parseDraftFile(content: string, filePath: string): Draft {
+  const parsed = parseMatterStrict(content);
   const data = parsed.data as Record<string, unknown>;
   return {
     id: asString(data.id),
@@ -68,7 +85,7 @@ export function parseDraftFile(content: string, filePath: string): Draft {
 }
 
 export function parseAdaptedFile(content: string, filePath: string): AdaptedVersion {
-  const parsed = matter(content);
+  const parsed = parseMatterStrict(content);
   const data = parsed.data as Record<string, unknown>;
   const draftId = asString(data.source_draft);
   const platform = asString(data.platform);
