@@ -21,7 +21,13 @@ export async function listAllDrafts(vaultRoot: string): Promise<Draft[]> {
       if (!file.endsWith('.md')) continue;
       const filePath = join(dateDir, file);
       const content = await readFile(filePath, 'utf-8');
-      drafts.push(parseDraftFile(content, filePath));
+      try {
+        drafts.push(parseDraftFile(content, filePath));
+      } catch (err) {
+        // Skip drafts with malformed frontmatter so one bad file doesn't block the queue.
+        // Surface the problem so we can go fix the source.
+        console.warn(`[drafts] skipping ${filePath}: ${(err as Error).message}`);
+      }
     }
   }
 

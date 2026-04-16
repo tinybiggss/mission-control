@@ -36,7 +36,13 @@ export async function listAllAdapted(vaultRoot: string): Promise<AdaptedVersion[
         if (!file.endsWith('.md')) continue;
         const filePath = join(draftDir, file);
         const content = await readFile(filePath, 'utf-8');
-        versions.push(parseAdaptedFile(content, filePath));
+        try {
+          versions.push(parseAdaptedFile(content, filePath));
+        } catch (err) {
+          // Skip versions with malformed frontmatter so one bad file doesn't block the queue.
+          // Surface the problem so we can go fix the source.
+          console.warn(`[adapted] skipping ${filePath}: ${(err as Error).message}`);
+        }
       }
     }
   }
