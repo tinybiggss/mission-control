@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>local.mike.corvus-dashboard</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/node</string>
+        <string>/Users/michaeljones/Dev/corvus-dashboard/build/index.js</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/michaeljones/Dev/corvus-dashboard</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>VAULT_ROOT</key>
+        <string>/Users/michaeljones/Dev/Obsidian/Mike_Thinking_Space</string>
+        <key>PORT</key>
+        <string>4321</string>
+        <key>HOST</key>
+        <string>127.0.0.1</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/michaeljones/Library/Logs/corvus-dashboard.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/michaeljones/Library/Logs/corvus-dashboard.error.log</string>
+</dict>
+</plist>
