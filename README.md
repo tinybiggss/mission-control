@@ -1,42 +1,166 @@
-# sv
+# Corvus Dashboard
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Local web dashboard for reviewing and approving Resilient Tomorrow content produced by the Corvus Content Engine (OpenClaw skills).
 
-## Creating a project
+## What It Does (Phase 2a)
 
-If you're seeing this, you've probably already done this step. Congrats!
+- Reads content drafts and platform-adapted versions directly from the Obsidian vault
+- Groups adapted versions under their parent drafts
+- Shows all platform versions for a single draft in one card
+- Lets you Approve / Reject / Edit each platform version inline
+- Bulk approve all platform versions of a draft with one click
+- Filter by status (Pending / Approved / Rejected / All) and platform
+- Auto-refreshes via SvelteKit invalidation after each action
 
-```sh
-# create a new project
-npx sv create my-app
+## What's Deferred
+
+- **Phase 2b:** Calendar + Kanban views, scheduling
+- **Phase 2c:** Analytics dashboard with charts
+- **Phase 2d:** Discord thread integration for discussions, preference learning capture
+- **Phase 3:** Publishing to social platforms
+- **Phase 4:** Performance tracking (Substack scraping, platform metrics)
+- **Phase 5:** Optimizer feedback loop
+
+## Requirements
+
+- Node.js 20+ (via Homebrew: `brew install node`)
+- pnpm (`npm install -g pnpm`)
+- Obsidian vault at `/Users/michaeljones/Dev/Obsidian/Mike_Thinking_Space`
+
+## Development
+
+```bash
+pnpm install
+pnpm dev
 ```
 
-To recreate this project with the same configuration:
+Dev server runs at `http://localhost:5173` with hot reload.
 
-```sh
-# recreate this project
-pnpm dlx sv@0.15.1 create --template minimal --types ts --install pnpm .
+## Testing
+
+```bash
+pnpm test:unit   # Vitest unit tests (28 tests)
+pnpm test:e2e    # Playwright E2E tests (3 tests, uses fixture vault)
+pnpm test        # Both
 ```
 
-## Developing
+## Production (Always-On via LaunchAgent)
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+The dashboard is already running at `http://localhost:4321` via a macOS LaunchAgent.
 
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+**To rebuild after code changes:**
+```bash
+pnpm build
+launchctl unload ~/Library/LaunchAgents/local.mike.corvus-dashboard.plist
+launchctl load ~/Library/LaunchAgents/local.mike.corvus-dashboard.plist
 ```
 
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
+**To stop:**
+```bash
+launchctl unload ~/Library/LaunchAgents/local.mike.corvus-dashboard.plist
 ```
 
-You can preview the production build with `npm run preview`.
+**To start:**
+```bash
+launchctl load ~/Library/LaunchAgents/local.mike.corvus-dashboard.plist
+```
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+**Logs:**
+- Stdout: `~/Library/Logs/corvus-dashboard.log`
+- Stderr: `~/Library/Logs/corvus-dashboard.error.log`
+
+**Status check:**
+```bash
+launchctl list | grep corvus-dashboard
+# Format: <PID> <exit-code> <label>
+# PID non-zero and exit-code 0 = healthy
+```
+
+## How It Talks to Corvus
+
+```
+Corvus skills (OpenClaw cron jobs)
+         │
+         │ writes markdown files
+         ▼
+Obsidian vault
+  ├── Resilient Tomorrow/Content Drafts/YYYY-MM-DD/draft-*.md
+  └── Resilient Tomorrow/Content Adapted/YYYY-MM-DD/draft-*/[platform].md
+         │
+         │ reads on every page load
+         ▼
+Corvus Dashboard (this app)
+         │
+         │ Mike approves/rejects/edits
+         ▼
+Updates frontmatter status in the same vault files
+         │
+         │ Corvus skills read updated status on next run
+         ▼
+Pipeline continues
+```
+
+Corvus writes. Dashboard reads and updates. No database, no sync layer. The vault markdown files ARE the state.
+
+## Architecture Decisions
+
+- **SvelteKit + Svelte 5 runes** — lightweight, fast component model, minimal runtime. Great for this scale of UI.
+- **Obsidian vault as source of truth** — no database, no sync issues. Corvus skills and dashboard read/write the same files.
+- **Direct file system access** — `gray-matter` for frontmatter parsing, `node:fs/promises` for I/O. No API intermediary between skills and dashboard.
+- **Defensive frontmatter parsing** — skips files with malformed YAML and logs warnings, so one bad draft doesn't crash the queue.
+- **LaunchAgent for always-on** — Mac Mini native, survives reboots, standard log location, `KeepAlive` restarts on crash.
+- **$env/dynamic/private** — lets `pnpm dev` read `.env` automatically while still working when env is set externally (LaunchAgent, Playwright).
+
+## Tech Stack
+
+- SvelteKit (Svelte 5, Vite)
+- TypeScript
+- Tailwind CSS 3 with custom RT color palette
+- gray-matter (YAML frontmatter parser)
+- Vitest (unit tests)
+- Playwright (E2E tests)
+- @sveltejs/adapter-node (production build)
+
+## Ports
+
+- Dev server: `5173` (`pnpm dev`)
+- Production (LaunchAgent): `4321`
+- E2E test server: `4322` (auto-managed by Playwright)
+
+## Related Docs
+
+- Design spec: `docs/superpowers/specs/2026-04-15-corvus-content-engine-design.md` (in Obsidian vault)
+- Phase 1 plan: `docs/superpowers/plans/2026-04-15-corvus-content-engine-phase1.md` (in vault)
+- Phase 2a plan: `docs/superpowers/plans/2026-04-16-corvus-dashboard-phase2a.md` (in vault)
+
+## File Structure
+
+```
+corvus-dashboard/
+├── src/
+│   ├── lib/
+│   │   ├── server/        # Vault I/O, frontmatter (server-only)
+│   │   ├── grouping.ts    # Pure functions, shared with client
+│   │   ├── types.ts       # TypeScript interfaces
+│   │   └── components/    # Svelte UI components
+│   ├── routes/
+│   │   ├── +layout.svelte # App shell (header, etc.)
+│   │   ├── +page.server.ts # Server loader for approval queue
+│   │   ├── +page.svelte   # Main approval queue UI
+│   │   └── api/           # REST endpoints
+│   ├── app.css
+│   └── app.html
+├── tests/
+│   ├── unit/              # Vitest
+│   ├── e2e/               # Playwright
+│   └── fixtures/vault/    # Sample vault structure for tests
+├── launchagent/           # Source-of-truth plist for LaunchAgent
+├── build/                 # Production bundle (git-ignored)
+├── .env                   # VAULT_ROOT + PORT (git-ignored)
+├── .env.example           # Template
+├── svelte.config.js
+├── vite.config.ts
+├── playwright.config.ts
+├── tailwind.config.ts
+└── README.md              # You are here
+```
