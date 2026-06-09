@@ -86,6 +86,10 @@ const { getLlmUsage, getRoutingStats, startLlmUsageRefresh } = require("./llm-us
 const { executeAction } = require("./actions");
 const { migrateDataDir } = require("./data");
 const { createStateModule } = require("./state");
+const {
+  createMissionControlAPI,
+  getRecentCronFailures,
+} = require("./mission-control");
 
 // ============================================================================
 // CONFIGURATION
@@ -154,6 +158,11 @@ const state = createStateModule({
   runOpenClaw,
   extractJSON,
   readTranscript: (sessionId) => sessions.readTranscript(sessionId),
+});
+
+// Mission Control Phase 1: Three Things widget, Brain Dump, Activity Feed
+const missionControl = createMissionControlAPI({
+  getOpenClawDir,
 });
 
 // ============================================================================
@@ -495,9 +504,23 @@ const server = http.createServer((req, res) => {
       ),
     );
   } else if (pathname === "/api/cron") {
+    // Enrich cron jobs with live run state (lastStatus, lastError, consecutiveErrors)
+    // from jobs-state.json so the UI can highlight failures.
     const cron = getCronJobs(getOpenClawDir);
+    const failures = getRecentCronFailures(getOpenClawDir, 24 * 7); // last 7 days
+    const failById = new Map(failures.map((f) => [f.id, f]));
+    const enriched = cron.map((j) => {
+      const f = failById.get(j.id);
+      return {
+        ...j,
+        lastStatus: f?.lastStatus || null,
+        lastError: f?.lastError || null,
+        lastRunAtMs: f?.lastRunAtMs || null,
+        consecutiveErrors: f?.consecutiveErrors || 0,
+      };
+    });
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ cron }, null, 2));
+    res.end(JSON.stringify({ cron: enriched }, null, 2));
   } else if (pathname === "/api/operators") {
     const method = req.method;
     const data = loadOperators(DATA_DIR);
@@ -601,6 +624,36 @@ const server = http.createServer((req, res) => {
       res.end(JSON.stringify({ error: "Method not allowed" }));
     }
     return;
+  } else if (pathname === "/api/mission/three-things" && req.method === "GET") {
+    missionControl.threeThings(req, res);
+  } else if (pathname === "/api/mission/braindump" && req.method === "GET") {
+    missionControl.brainDumpList(req, res);
+  } else if (pathname === "/api/mission/braindump" && req.method === "POST") {
+    missionControl.brainDumpCreate(req, res);
+  } else if (pathname.startsWith("/api/mission/braindump/") && req.method === "PATCH") {
+    const id = decodeURIComponent(pathname.replace("/api/mission/braindump/", ""));
+    missionControl.brainDumpUpdate(req, res, id);
+  } else if (pathname.startsWith("/api/mission/braindump/") && req.method === "DELETE") {
+    const id = decodeURIComponent(pathname.replace("/api/mission/braindump/", ""));
+    missionControl.brainDumpDelete(req, res, id);
+  } else if (pathname === "/api/mission/feed" && req.method === "GET") {
+    missionControl.feedList(req, res);
+  } else if (pathname === "/api/mission/feed" && req.method === "POST") {
+    missionControl.feedAppend(req, res);
+  } else if (
+    pathname.startsWith("/api/mission/feed/") &&
+    pathname.endsWith("/ack") &&
+    req.method === "PATCH"
+  ) {
+    const id = decodeURIComponent(
+      pathname.replace("/api/mission/feed/", "").replace(/\/ack$/, ""),
+    );
+    missionControl.feedAck(req, res, id);
+  } else if (pathname.startsWith("/api/mission/feed/") && req.method === "DELETE") {
+    const id = decodeURIComponent(pathname.replace("/api/mission/feed/", ""));
+    missionControl.feedDismiss(req, res, id);
+  } else if (pathname === "/api/mission/cron-failures" && req.method === "GET") {
+    missionControl.cronFailures(req, res);
   } else if (isJobsRoute(pathname)) {
     handleJobsRequest(req, res, pathname, query, req.method);
   } else {

@@ -1,0 +1,105 @@
+<!-- Mission Control Phase 1: Three custom panels -->
+<div class="section" id="mission-control-section">
+  <div class="vitals-panel">
+    <div class="vitals-header">
+      <div class="vitals-title">
+        🎯 Mission Control
+        <span class="vitals-hostname" id="mc-updated">—</span>
+      </div>
+      <div class="vitals-uptime">
+        <span id="mc-summary">loading…</span>
+      </div>
+    </div>
+
+    <div class="mc-grid">
+      <!-- PANEL 1: Three Things -->
+      <div class="mc-panel mc-panel-threethings" id="mc-three-things">
+        <div class="mc-panel-header">
+          <span class="mc-panel-title">🎯 Three Things</span>
+          <span class="mc-panel-sub">What needs Mike right now</span>
+        </div>
+        <div class="mc-threethings-list" id="mc-threethings-list">
+          <div class="mc-empty">No urgent items. All clear.</div>
+        </div>
+      </div>
+
+      <!-- PANEL 2: Brain Dump -->
+      <div class="mc-panel mc-panel-braindump" id="mc-braindump">
+        <div class="mc-panel-header">
+          <span class="mc-panel-title">🧠 Brain Dump</span>
+          <span class="mc-panel-sub">Type, press Enter — organize later</span>
+        </div>
+        <form class="mc-braindump-form" id="mc-braindump-form">
+          <textarea
+            id="mc-braindump-input"
+            placeholder="What's on your mind? Press Cmd+Enter to capture."
+            rows="2"
+            autocomplete="off"
+          ></textarea>
+          <div class="mc-braindump-actions">
+            <button type="submit" class="btn-primary mc-btn-sm">Capture</button>
+            <span class="mc-braindump-hint">Cmd+Enter</span>
+          </div>
+        </form>
+        <div class="mc-braindump-columns" id="mc-braindump-columns">
+          <div class="mc-column" data-status="unsorted">
+            <div class="mc-column-header">
+              <span>📥 Unsorted</span>
+              <span class="mc-column-count" data-count-for="unsorted">0</span>
+            </div>
+            <div class="mc-column-body" data-drop="unsorted">
+              <div class="mc-empty mc-empty-sm">Drop tasks here</div>
+            </div>
+          </div>
+          <div class="mc-column" data-status="urgent-important">
+            <div class="mc-column-header">
+              <span>🔥 Do First</span>
+              <span class="mc-column-count" data-count-for="urgent-important">0</span>
+            </div>
+            <div class="mc-column-body" data-drop="urgent-important">
+              <div class="mc-empty mc-empty-sm">Urgent & important</div>
+            </div>
+          </div>
+          <div class="mc-column" data-status="schedule">
+            <div class="mc-column-header">
+              <span>📅 Schedule</span>
+              <span class="mc-column-count" data-count-for="schedule">0</span>
+            </div>
+            <div class="mc-column-body" data-drop="schedule">
+              <div class="mc-empty mc-empty-sm">Important, not urgent</div>
+            </div>
+          </div>
+          <div class="mc-column" data-status="delegate">
+            <div class="mc-column-header">
+              <span>🤝 Delegate</span>
+              <span class="mc-column-count" data-count-for="delegate">0</span>
+            </div>
+            <div class="mc-column-body" data-drop="delegate">
+              <div class="mc-empty mc-empty-sm">Urgent, not important</div>
+            </div>
+          </div>
+          <div class="mc-column" data-status="icebox">
+            <div class="mc-column-header">
+              <span>🧊 Ice Box</span>
+              <span class="mc-column-count" data-count-for="icebox">0</span>
+            </div>
+            <div class="mc-column-body" data-drop="icebox">
+              <div class="mc-empty mc-empty-sm">Auto-thaw in 7 days</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 3: Activity Feed -->
+      <div class="mc-panel mc-panel-feed" id="mc-feed">
+        <div class="mc-panel-header">
+          <span class="mc-panel-title">📊 Activity</span>
+          <span class="mc-panel-sub" id="mc-feed-sub">Signal-filtered</span>
+        </div>
+        <div class="mc-feed-list" id="mc-feed-list">
+          <div class="mc-empty">No signal yet. Heartbeats filtered out.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
