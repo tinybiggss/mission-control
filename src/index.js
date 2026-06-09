@@ -90,6 +90,7 @@ const {
   createMissionControlAPI,
   getRecentCronFailures,
 } = require("./mission-control");
+const { createPhase2API } = require("./mc-phase2");
 
 // ============================================================================
 // CONFIGURATION
@@ -162,6 +163,11 @@ const state = createStateModule({
 
 // Mission Control Phase 1: Three Things widget, Brain Dump, Activity Feed
 const missionControl = createMissionControlAPI({
+  getOpenClawDir,
+});
+
+// Mission Control Phase 2: Obsidian Tasks integration
+const phase2 = createPhase2API({
   getOpenClawDir,
 });
 
@@ -654,6 +660,27 @@ const server = http.createServer((req, res) => {
     missionControl.feedDismiss(req, res, id);
   } else if (pathname === "/api/mission/cron-failures" && req.method === "GET") {
     missionControl.cronFailures(req, res);
+  }
+  // ---- Phase 2: Obsidian Tasks Integration ----
+  else if (pathname === "/api/mc/promote" && req.method === "POST") {
+    phase2.promote(req, res);
+  } else if (pathname.startsWith("/api/mc/kanban/") && req.method === "GET") {
+    const column = decodeURIComponent(pathname.replace("/api/mc/kanban/", ""));
+    phase2.kanban(req, res, column);
+  } else if (pathname.startsWith("/api/mc/card/") && req.method === "PATCH") {
+    const id = decodeURIComponent(pathname.replace("/api/mc/card/", ""));
+    phase2.cardUpdate(req, res, id);
+  } else if (pathname.startsWith("/api/mc/card/") && req.method === "DELETE") {
+    const id = decodeURIComponent(pathname.replace("/api/mc/card/", ""));
+    phase2.cardDelete(req, res, id);
+  } else if (pathname === "/api/mc/rollover" && req.method === "POST") {
+    phase2.rollover(req, res);
+  } else if (pathname === "/api/mc/sync-from-obsidian" && req.method === "POST") {
+    phase2.syncFromObsidian(req, res);
+  } else if (pathname === "/api/mc/cleanup" && req.method === "POST") {
+    phase2.cleanup(req, res);
+  } else if (pathname === "/api/mc/velocity" && req.method === "GET") {
+    phase2.velocity(req, res);
   } else if (isJobsRoute(pathname)) {
     handleJobsRequest(req, res, pathname, query, req.method);
   } else {

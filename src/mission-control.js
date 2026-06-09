@@ -151,6 +151,12 @@ function addBrainDump(dataDir, rawText, parsed = {}) {
     updatedAt: now,
     postponeCount: 0,
     iceboxFrozenUntil: null,
+    // Phase 2: Obsidian sync fields
+    obsidianRef: null,    // "[[2026-06-09#^task-7d4f]]"
+    blockId: null,        // "task-7d4f"
+    mdLine: null,         // cached markdown line
+    archivedAt: null,
+    archiveReason: null,
   };
   tasks.push(task);
   writeBrainDump(dataDir, tasks);
