@@ -132,6 +132,7 @@ document.getElementById('saveComment')?.addEventListener('click', () => {
   saveComments();
   renderCommentHighlights();
   renderCommentsSidebar();
+  renderHighlightsSidebar();
   
   document.getElementById('commentModal').classList.add('hidden');
   selectedQuote = null;
@@ -158,6 +159,14 @@ function renderCommentHighlights() {
   // Add new highlights for unresolved comments
   currentComments.filter(c => !c.resolved).forEach(comment => {
     highlightCommentQuote(comment.quote, comment.id);
+  });
+  
+  // Auto-show sidebar if there are comments or highlights
+  const sidebar = document.getElementById('commentsSidebar');
+  if (sidebar && (currentComments.length > 0 || currentHighlights.length > 0)) {
+    sidebar.classList.remove('hidden');
+  }
+}
   });
 }
 

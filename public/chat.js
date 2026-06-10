@@ -128,7 +128,8 @@ const CorvusChat = {
           message,
           draftPath: this.currentDraft || null,
           draftContent: this.currentContent,
-          comments: window.CorvusComments?.currentComments || []
+          comments: window.CorvusComments?.currentComments || [],
+          highlights: window.CorvusComments?.currentHighlights || []
         })
       });
 

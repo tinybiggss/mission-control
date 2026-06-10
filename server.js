@@ -603,9 +603,9 @@ app.post(/\/api\/drafts\/(.+)\/phase$/, (req, res) => {
 
 // === /Phase endpoints ===========================================================
 
-// AI Chat — proxy to OpenClaw via exec script
+// === AI Chat — proxy to Ollama directly =================================
 app.post('/api/chat', async (req, res) => {
-  const { message, draftContent, comments, draftPath } = req.body;
+  const { message, draftContent, comments, highlights, draftPath } = req.body;
 
   // Resolve article_id from frontmatter (best signal) or path (fallback).
   // We do this before calling out to the AI so logging is consistent with
@@ -658,18 +658,33 @@ ${draftContent}
 
 ${comments && comments.length > 0 ? `Current comments on the document:\n${comments.map(c => `  - "${c.quote}" → ${c.text}${c.resolved ? ' [resolved]' : ''}`).join('\n')}` : 'No comments yet.'}
 
+${highlights && highlights.length > 0 ? `Current highlighted passages (color → quoted text):\n${highlights.map(h => `  - ${h.color} highlight: "${h.text}"`).join('\n')}` : 'No highlights yet.'}
+
 User message: ${message}
 
 Provide a helpful, thoughtful response. You can suggest edits to the document if relevant — if you do, format them clearly so the editor can offer to apply them.`;
 
+  // Use Ollama API directly (gateway /v1/agent is blocked)
+  const ollamaUrl = 'http://127.0.0.1:11434';
+  const model = 'minimax-m2.7:cloud';
+  
   try {
-    const { execSync } = require('child_process');
-    // Use openclaw CLI to query the AI
-    const scriptPath = '/tmp/corvus-chat.sh';
-    const fullPrompt = prompt.replace(/'/g, "'\\''");
-    fs.writeFileSync(scriptPath, `#!/bin/bash\nexport CORVUS_PROMPT='${fullPrompt}'\nopenclaw ai prompt --model ollama/minimax-m2.7:cloud 2>&1`, { mode: 0o755 });
-    const result = execSync(`/bin/bash ${scriptPath}`, { timeout: 60, maxBuffer: 10 * 1024 * 1024 });
-    const responseText = result.toString();
+    const response = await fetch(`${ollamaUrl}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: model,
+        prompt: prompt,
+        stream: false
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Ollama error: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    const responseText = data.response || JSON.stringify(data);
 
     // Log the AI response (fire-and-forget).
     appendSessionEvent({
@@ -685,7 +700,7 @@ Provide a helpful, thoughtful response. You can suggest edits to the document if
 
     res.json({ response: responseText });
   } catch (e) {
-    const errMsg = `Error contacting Corvus: ${e.message}\n\nMake sure OpenClaw is running and the command 'openclaw ai prompt' works.`;
+    const errMsg = `Error contacting Corvus: ${e.message}\n\nOllama may not be running on port 11434.`;
     // Log the error response so we don't lose the round-trip from training data.
     appendSessionEvent({
       session_id: session.session_id,
