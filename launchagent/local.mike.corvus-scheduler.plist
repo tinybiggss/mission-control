@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>local.mike.corvus-scheduler</string>
+
+  <!--
+    Runs the content scheduler on Monday and Friday at 8:00 AM.
+    Requires the Corvus Dashboard to be running at localhost:4321
+    (it is kept alive by local.mike.corvus-dashboard).
+    Weekday: 1 = Monday, 5 = Friday
+  -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/curl</string>
+    <string>-s</string>
+    <string>-X</string>
+    <string>POST</string>
+    <string>http://localhost:4321/api/schedule/run</string>
+    <string>-o</string>
+    <string>/tmp/corvus-scheduler-last-run.json</string>
+  </array>
+
+  <key>StartCalendarInterval</key>
+  <array>
+    <!-- Monday 08:00 -->
+    <dict>
+      <key>Weekday</key>
+      <integer>1</integer>
+      <key>Hour</key>
+      <integer>8</integer>
+      <key>Minute</key>
+      <integer>0</integer>
+    </dict>
+    <!-- Friday 08:00 -->
+    <dict>
+      <key>Weekday</key>
+      <integer>5</integer>
+      <key>Hour</key>
+      <integer>8</integer>
+      <key>Minute</key>
+      <integer>0</integer>
+    </dict>
+  </array>
+
+  <key>StandardOutPath</key>
+  <string>/Users/michaeljones/Library/Logs/corvus-scheduler.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/michaeljones/Library/Logs/corvus-scheduler.error.log</string>
+
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>

@@ -21,6 +21,12 @@ export const load: PageServerLoad = async () => {
     rejected: allVersions.filter((v) => v.status === 'rejected').length
   };
   const platforms = Array.from(new Set(allVersions.map((v) => v.platform))).sort();
+  const pillars = Array.from(new Set(groups.map((g) => g.draft.pillar).filter(Boolean))).sort();
+  const scores = groups.map((g) => g.draft.source_score).filter(Number.isFinite);
+  const scoreBounds = {
+    min: scores.length ? Math.floor(Math.min(...scores) * 10) / 10 : 0,
+    max: scores.length ? Math.ceil(Math.max(...scores) * 10) / 10 : 10
+  };
 
-  return { groups, counts, platforms };
+  return { groups, counts, platforms, pillars, scoreBounds };
 };

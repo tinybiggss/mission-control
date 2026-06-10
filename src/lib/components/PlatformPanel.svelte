@@ -9,7 +9,12 @@
     onContentChange
   }: {
     version: AdaptedVersion;
-    onStatusChange: (draftId: string, platform: string, newStatus: AdaptedStatus) => Promise<void>;
+    onStatusChange: (
+      draftId: string,
+      platform: string,
+      newStatus: AdaptedStatus,
+      reason?: string
+    ) => Promise<void>;
     onContentChange: (draftId: string, platform: string, newBody: string) => Promise<void>;
   } = $props();
 
@@ -17,9 +22,19 @@
   let busy = $state(false);
 
   async function doStatus(status: AdaptedStatus) {
+    // Reject prompts for an optional reason — this signal feeds the preference
+    // learning log (spec §3.8). Cancel is treated as "no reason given" and the
+    // reject still goes through; only a window.prompt === null (user hit Esc)
+    // aborts the whole action.
+    let reason: string | undefined;
+    if (status === 'rejected') {
+      const entered = window.prompt('Why reject? (optional — press Esc to cancel)');
+      if (entered === null) return;
+      reason = entered.trim() || undefined;
+    }
     busy = true;
     try {
-      await onStatusChange(version.draftId, version.platform, status);
+      await onStatusChange(version.draftId, version.platform, status, reason);
     } finally {
       busy = false;
     }
@@ -90,14 +105,6 @@
         onclick={() => (editing = true)}
       >
         ✎ Edit
-      </button>
-
-      <button
-        class="px-3 py-1.5 bg-gray-100 text-gray-800 rounded text-sm hover:bg-gray-200 ml-auto"
-        disabled
-        title="Phase 2d: Discord thread integration"
-      >
-        💬 Discuss
       </button>
     </div>
   {/if}

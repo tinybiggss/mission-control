@@ -21,6 +21,13 @@ export function groupAdaptedByDraft(
 
 export function filterGroups(groups: DraftGroup[], filter: FilterState): DraftGroup[] {
   return groups
+    .filter((g) => {
+      const pillarMatch = filter.pillar === 'all' || g.draft.pillar === filter.pillar;
+      const scoreMin = filter.scoreMin ?? -Infinity;
+      const scoreMax = filter.scoreMax ?? Infinity;
+      const scoreMatch = g.draft.source_score >= scoreMin && g.draft.source_score <= scoreMax;
+      return pillarMatch && scoreMatch;
+    })
     .map((g) => {
       const filtered = g.versions.filter((v) => {
         const statusMatch = filter.status === 'all' || v.status === filter.status;

@@ -18,6 +18,7 @@ const DRAFT_1: Draft = {
   video_brief: '',
   napkin_asset: '',
   gamma_asset: '',
+  discord_thread_url: '',
   body: 'body'
 };
 
@@ -88,19 +89,19 @@ describe('filterGroups', () => {
   ];
 
   it('returns all groups when status filter is "all"', () => {
-    const result = filterGroups(groups, { status: 'all', platform: 'all' });
+    const result = filterGroups(groups, { status: 'all', platform: 'all', pillar: 'all', scoreMin: null, scoreMax: null });
     expect(result).toHaveLength(2);
   });
 
   it('filters versions by status, removing groups left empty', () => {
-    const result = filterGroups(groups, { status: 'approved', platform: 'all' });
+    const result = filterGroups(groups, { status: 'approved', platform: 'all', pillar: 'all', scoreMin: null, scoreMax: null });
     expect(result).toHaveLength(1);
     expect(result[0].draft.id).toBe('draft-002');
     expect(result[0].versions).toHaveLength(1);
   });
 
   it('filters versions by platform', () => {
-    const result = filterGroups(groups, { status: 'all', platform: 'x-twitter' });
+    const result = filterGroups(groups, { status: 'all', platform: 'x-twitter', pillar: 'all', scoreMin: null, scoreMax: null });
     expect(result).toHaveLength(1);
     expect(result[0].draft.id).toBe('draft-001');
     expect(result[0].versions).toHaveLength(1);
@@ -108,10 +109,43 @@ describe('filterGroups', () => {
   });
 
   it('combines status and platform filters', () => {
-    const result = filterGroups(groups, { status: 'pending-approval', platform: 'linkedin' });
+    const result = filterGroups(groups, { status: 'pending-approval', platform: 'linkedin', pillar: 'all', scoreMin: null, scoreMax: null });
     expect(result).toHaveLength(1);
     expect(result[0].draft.id).toBe('draft-001');
     expect(result[0].versions).toHaveLength(1);
     expect(result[0].versions[0].platform).toBe('linkedin');
+  });
+
+  it('filters drafts by pillar', () => {
+    const draft2Pillar: Draft = { ...DRAFT_1, id: 'draft-002', pillar: 'Community' };
+    const g: DraftGroup[] = [
+      { draft: DRAFT_1, versions: [V_LI_1] },
+      { draft: draft2Pillar, versions: [V_LI_2] }
+    ];
+    const result = filterGroups(g, { status: 'all', platform: 'all', pillar: 'Food', scoreMin: null, scoreMax: null });
+    expect(result).toHaveLength(1);
+    expect(result[0].draft.pillar).toBe('Food');
+  });
+
+  it('filters drafts by scoreMin', () => {
+    const lowScore: Draft = { ...DRAFT_1, id: 'draft-low', source_score: 2.0 };
+    const g: DraftGroup[] = [
+      { draft: DRAFT_1, versions: [V_LI_1] },   // score 4.0
+      { draft: lowScore, versions: [V_LI_2] }    // score 2.0
+    ];
+    const result = filterGroups(g, { status: 'all', platform: 'all', pillar: 'all', scoreMin: 3.0, scoreMax: null });
+    expect(result).toHaveLength(1);
+    expect(result[0].draft.source_score).toBe(4.0);
+  });
+
+  it('filters drafts by scoreMax', () => {
+    const highScore: Draft = { ...DRAFT_1, id: 'draft-high', source_score: 8.0 };
+    const g: DraftGroup[] = [
+      { draft: DRAFT_1, versions: [V_LI_1] },   // score 4.0
+      { draft: highScore, versions: [V_LI_2] }  // score 8.0
+    ];
+    const result = filterGroups(g, { status: 'all', platform: 'all', pillar: 'all', scoreMin: null, scoreMax: 5.0 });
+    expect(result).toHaveLength(1);
+    expect(result[0].draft.source_score).toBe(4.0);
   });
 });

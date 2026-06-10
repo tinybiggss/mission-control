@@ -9,12 +9,22 @@
     onBulkApprove
   }: {
     group: DraftGroup;
-    onStatusChange: (draftId: string, platform: string, newStatus: AdaptedStatus) => Promise<void>;
+    onStatusChange: (
+      draftId: string,
+      platform: string,
+      newStatus: AdaptedStatus,
+      reason?: string
+    ) => Promise<void>;
     onContentChange: (draftId: string, platform: string, newBody: string) => Promise<void>;
     onBulkApprove: (draftId: string) => Promise<void>;
   } = $props();
 
   let bulkBusy = $state(false);
+  let discussBusy = $state(false);
+  // Optimistic override — remains null until user creates a thread in this session.
+  // Otherwise we fall through to the prop so reloads from the server flow through.
+  let optimisticThreadUrl = $state<string | null>(null);
+  const threadUrl = $derived(optimisticThreadUrl ?? group.draft.discord_thread_url ?? '');
 
   async function bulkApprove() {
     bulkBusy = true;
@@ -22,6 +32,28 @@
       await onBulkApprove(group.draft.id);
     } finally {
       bulkBusy = false;
+    }
+  }
+
+  async function discuss() {
+    if (threadUrl) {
+      window.open(threadUrl, '_blank', 'noopener');
+      return;
+    }
+    discussBusy = true;
+    try {
+      const res = await fetch(`/api/drafts/${encodeURIComponent(group.draft.id)}/discussion`, {
+        method: 'POST'
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(`Could not create discussion: ${body.message || res.statusText}`);
+        return;
+      }
+      optimisticThreadUrl = body.threadUrl;
+      window.open(body.threadUrl, '_blank', 'noopener');
+    } finally {
+      discussBusy = false;
     }
   }
 
@@ -42,15 +74,25 @@
       </div>
     </div>
 
-    {#if pendingCount > 0}
+    <div class="flex gap-2 whitespace-nowrap">
       <button
-        class="px-4 py-2 bg-rt-green text-white rounded hover:bg-green-800 disabled:opacity-50 text-sm font-medium whitespace-nowrap"
-        onclick={bulkApprove}
-        disabled={bulkBusy}
+        class="px-3 py-2 bg-indigo-100 text-indigo-800 rounded hover:bg-indigo-200 disabled:opacity-50 text-sm font-medium"
+        onclick={discuss}
+        disabled={discussBusy}
+        title={threadUrl ? 'Open existing Discord thread' : 'Start a Discord thread for this draft'}
       >
-        {bulkBusy ? 'Approving…' : `Approve All (${pendingCount})`}
+        💬 {threadUrl ? 'Open Thread' : discussBusy ? 'Creating…' : 'Discuss'}
       </button>
-    {/if}
+      {#if pendingCount > 0}
+        <button
+          class="px-4 py-2 bg-rt-green text-white rounded hover:bg-green-800 disabled:opacity-50 text-sm font-medium"
+          onclick={bulkApprove}
+          disabled={bulkBusy}
+        >
+          {bulkBusy ? 'Approving…' : `Approve All (${pendingCount})`}
+        </button>
+      {/if}
+    </div>
   </div>
 
   <div class="space-y-3">

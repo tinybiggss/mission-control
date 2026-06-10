@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Corvus Dashboard — Resilient Tomorrow Editor</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="tiptap-bundle.js"></script>
+  <script src="bundle.js"></script>
+</head>
+<body>
+  <div class="app">
+    <!-- Draft Browser Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2>📄 Drafts</h2>
+        <button class="icon-btn" id="toggleSidebar" title="Collapse sidebar">◀</button>
+      </div>
+      <div class="draft-list" id="draftList">
+        <div class="draft-tabs" id="draftTabs">
+          <button class="draft-tab active" data-filter="all">All</button>
+          <button class="draft-tab" data-filter="article-outline">📝 Articles</button>
+          <button class="draft-tab" data-filter="text-draft">✍️ Text Posts</button>
+          <button class="draft-tab" data-filter="video-script">🎬 Video Scripts</button>
+          <button class="draft-tab" data-filter="visual-brief">🎨 Visual Briefs</button>
+        </div>
+        <div class="draft-items" id="draftItems">
+          <div class="loading">Loading drafts... <button onclick="if(window.CorvusEditor&&window.CorvusEditor.init)window.CorvusEditor.init()">Load</button></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Editor Area -->
+    <main class="editor-area">
+      <div class="editor-toolbar" id="editorToolbar">
+        <button class="toolbar-btn" data-command="bold" title="Bold (⌘B)"><b>B</b></button>
+        <button class="toolbar-btn" data-command="italic" title="Italic (⌘I)"><i>I</i></button>
+        <button class="toolbar-btn" data-command="strike" title="Strikethrough"><s>S</s></button>
+        <span class="toolbar-sep">|</span>
+        <button class="toolbar-btn" data-command="h1" title="Heading 1">H1</button>
+        <button class="toolbar-btn" data-command="h2" title="Heading 2">H2</button>
+        <button class="toolbar-btn" data-command="h3" title="Heading 3">H3</button>
+        <span class="toolbar-sep">|</span>
+        <button class="toolbar-btn" data-command="bulletList" title="Bullet list">• List</button>
+        <button class="toolbar-btn" data-command="orderedList" title="Numbered list">1. List</button>
+        <span class="toolbar-sep">|</span>
+        <button class="toolbar-btn" data-command="blockquote" title="Quote">❝</button>
+        <button class="toolbar-btn" data-command="codeBlock" title="Code block">&lt;/&gt;</button>
+        <span class="toolbar-sep">|</span>
+        <button class="toolbar-btn" id="addCommentBtn" title="Add comment on selected text">💬 Comment</button>
+        <span class="toolbar-sep">|</span>
+        <div class="highlighter-group" title="Highlight selected text">
+          <button class="highlighter-btn" data-highlight="#FFEB3B" style="background:#FFEB3B" title="Yellow highlighter"></button>
+          <button class="highlighter-btn" data-highlight="#A5D6A7" style="background:#A5D6A7" title="Green highlighter"></button>
+          <button class="highlighter-btn" data-highlight="#F48FB1" style="background:#F48FB1" title="Pink highlighter"></button>
+          <button class="highlighter-btn" data-highlight="#90CAF9" style="background:#90CAF9" title="Blue highlighter"></button>
+          <button class="highlighter-btn" data-highlight="#FFAB91" style="background:#FFAB91" title="Orange highlighter"></button>
+          <button class="highlighter-btn" data-highlight="none" title="Remove highlight">✕</button>
+        </div>
+        <span class="toolbar-sep">|</span>
+        <button class="toolbar-btn" id="toggleChat" title="Toggle AI chat panel">🤖 AI Chat</button>
+      </div>
+
+      <div class="editor-container">
+        <div id="editor" class="editor"></div>
+        <div class="editor-status">
+          <span id="saveStatus">Ready</span>
+          <span id="draftTitle">No draft selected</span>
+        </div>
+      </div>
+    </main>
+
+    <!-- AI Chat Panel -->
+    <aside class="chat-panel" id="chatPanel">
+      <div class="phase-indicator" id="phaseIndicator">
+        <div class="phase-info">
+          <div class="phase-line-1">
+            <span class="phase-doc" id="phaseDocTitle">No draft</span>
+          </div>
+          <div class="phase-line-2">
+            <span class="phase-pill" id="phasePill">PASS —</span>
+            <span class="phase-label" id="phaseLabel">—</span>
+          </div>
+          <div class="phase-line-3 phase-goal" id="phaseGoal"></div>
+        </div>
+        <div class="phase-actions">
+          <button class="phase-btn" id="phasePrev" title="Move to previous phase" disabled>← Prev</button>
+          <button class="phase-btn promote" id="phasePromote" title="Promote to next phase" disabled>PROMOTE →</button>
+        </div>
+        <div class="phase-next-row">
+          <span class="phase-default-flag hidden" id="phaseDefaultFlag">default</span>
+          <span class="phase-next" id="phaseNextRow">Next: <span id="phaseNext">—</span></span>
+        </div>
+      </div>
+      <div class="chat-header">
+        <h3>🤖 Corvus</h3>
+        <button class="icon-btn" id="toggleChatClose" title="Hide chat panel">✕</button>
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-welcome">
+          <p>👋 Ask me anything about this draft — structure, clarity, ideas, edits, or anything else.</p>
+          <p>I can see the full document and all your comments.</p>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <textarea id="chatInput" placeholder="Ask Corvus about this draft..." rows="3"></textarea>
+        <button id="sendChat" class="send-btn">Send</button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Comment Modal -->
+  <div class="modal hidden" id="commentModal">
+    <div class="modal-content">
+      <h3>Add Comment</h3>
+      <p class="comment-quote" id="commentQuote"></p>
+      <textarea id="commentText" placeholder="Your comment..." rows="4"></textarea>
+      <div class="modal-buttons">
+        <button class="btn-secondary" id="cancelComment">Cancel</button>
+        <button class="btn-primary" id="saveComment">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comments Sidebar -->
+  <div class="comments-sidebar hidden" id="commentsSidebar">
+    <div class="comments-header">
+      <h3>💬 Comments</h3>
+      <button class="icon-btn" id="closeComments">✕</button>
+    </div>
+    <div class="comments-list" id="commentsList"></div>
+    <div class="highlights-list" id="highlightsList"></div>
+  </div>
+
+  <script src="comments.js"></script>
+  <script src="chat.js"></script>
+</body>
+</html>

@@ -28,12 +28,14 @@ afterEach(async () => {
 describe('listAllAdapted', () => {
   it('returns all adapted versions across all date/draft directories', async () => {
     const versions = await listAllAdapted(FIXTURE_VAULT);
-    expect(versions).toHaveLength(3);
+    expect(versions).toHaveLength(5);
     const ids = versions.map((v) => v.id).sort();
     expect(ids).toEqual([
       'draft-2026-04-15-001/linkedin',
       'draft-2026-04-15-001/x-twitter',
-      'draft-2026-04-15-002/linkedin'
+      'draft-2026-04-15-002/bluesky',
+      'draft-2026-04-15-002/linkedin',
+      'draft-2026-04-15-002/threads'
     ]);
   });
 });

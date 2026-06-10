@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>local.mike.corvus-publisher</string>
+
+  <!--
+    Runs the content publisher daily at 10:00 AM.
+    Requires the Corvus Dashboard to be running at localhost:4321
+    (kept alive by local.mike.corvus-dashboard).
+    Posts anything with status=scheduled and scheduled_date=today.
+    Last run output written to /tmp/corvus-publisher-last-run.json.
+  -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/curl</string>
+    <string>-s</string>
+    <string>-X</string>
+    <string>POST</string>
+    <string>http://localhost:4321/api/publish/run</string>
+    <string>-o</string>
+    <string>/tmp/corvus-publisher-last-run.json</string>
+  </array>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>10</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/Users/michaeljones/Library/Logs/corvus-publisher.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/michaeljones/Library/Logs/corvus-publisher.error.log</string>
+
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>

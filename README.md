@@ -12,6 +12,28 @@ Local web dashboard for reviewing and approving Resilient Tomorrow content produ
 - Filter by status (Pending / Approved / Rejected / All) and platform
 - Auto-refreshes via SvelteKit invalidation after each action
 
+## Chat Session Logging
+
+The Express server (`server.js`) hosts the AI chat panel at `/api/chat`. Every chat round-trip (Mike → Corvus) is captured to disk for future agent training and editorial-history review.
+
+**What gets logged:**
+- Timestamp (ISO 8601)
+- Session ID (UUID, shared between Mike's message and Corvus's response)
+- Article ID (from frontmatter `article_id` / `title` / `id`, else derived from the draft filename, else `"untitled"`)
+- Article path (the draft the user is currently editing)
+- Sender (`"Mike Jones"` or `"Corvus"`)
+- Message type (heuristic: `directive` / `feedback` / `question` / `approval` / `response` / `error`)
+- Content
+- Draft size and comment count (context, helps summarizers)
+
+**Storage:** `~/.openclaw/workspace/session-logs/YYYY-MM-DD/dashboard-{article}-{session-hash}.jsonl` — one JSONL file per session, append-only. Each round-trip (Mike + Corvus) is in one file. Writes are fire-and-forget and serialized per-file so events stay in order; log IO never blocks the chat response and never crashes the dashboard.
+
+**Retrieval API:**
+- `GET /api/sessions/latest` — most recent session (metadata only)
+- `GET /api/sessions/:article_id` — all sessions for an article, grouped with their messages
+
+See `~/.openclaw/workspace/projects/session-capture/Session-Capture-Design-Spec.md` for the full design.
+
 ## What's Deferred
 
 - **Phase 2b:** Calendar + Kanban views, scheduling
@@ -51,9 +73,10 @@ The dashboard is already running at `http://localhost:4321` via a macOS LaunchAg
 **To rebuild after code changes:**
 ```bash
 pnpm build
-launchctl unload ~/Library/LaunchAgents/local.mike.corvus-dashboard.plist
-launchctl load ~/Library/LaunchAgents/local.mike.corvus-dashboard.plist
+launchctl kickstart -k gui/$(id -u)/local.mike.corvus-dashboard
 ```
+
+`kickstart -k` stops the running process and starts a fresh one against the new `build/` bundle in a single step. Required after any code change — otherwise the running Node process keeps references to the previous bundle's chunks and new routes return 500. Use `unload`/`load` (below) only if the plist itself changed.
 
 **To stop:**
 ```bash

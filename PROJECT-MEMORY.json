@@ -1,0 +1,138 @@
+{
+  "project": {
+    "name": "CorvusDashboard",
+    "full_name": "Corvus Dashboard — Local web UI for Resilient Tomorrow content pipeline",
+    "status": "Phase 2b — Calendar + Kanban shipped; scheduling logic in place",
+    "start_date": "2026-04-15",
+    "current_date": "2026-04-17",
+    "repository": "/Users/michaeljones/Dev/corvus-dashboard",
+    "version": "phase-2b"
+  },
+
+  "decisions": [
+    {
+      "id": "DEC-001",
+      "date": "2026-04-16",
+      "decision": "Vault markdown files are the single source of truth; no database",
+      "rationale": "Corvus skills already write markdown to the vault. A DB would add sync complexity and a second source of truth. Every page load reads fresh file state.",
+      "alternatives_considered": ["SQLite cache", "Redis-backed index", "Postgres with sync worker"],
+      "made_by": "Mike + Claude",
+      "outcome": "Positive"
+    },
+    {
+      "id": "DEC-002",
+      "date": "2026-04-17",
+      "decision": "Calendar reuses the existing /schedule API rather than a new /reschedule endpoint",
+      "rationale": "updateAdaptedSchedule already handles both initial scheduling and rescheduling (it just overwrites scheduled_date). No need to duplicate logic.",
+      "alternatives_considered": ["Dedicated /reschedule route", "PATCH instead of POST"],
+      "made_by": "Mike + Claude",
+      "outcome": "Positive"
+    }
+  ],
+
+  "architecture_decisions": [
+    {
+      "id": "ARCH-001",
+      "date": "2026-04-16",
+      "decision": "SvelteKit with adapter-node and SSR disabled per-page where needed",
+      "rationale": "Svelte 5 runes give clean reactive state; adapter-node lets us run as a plain Node process under LaunchAgent without Vercel/Cloudflare lock-in",
+      "details": "pnpm package manager; Tailwind for styling; gray-matter for frontmatter; Vitest for unit tests; Playwright for E2E"
+    },
+    {
+      "id": "ARCH-002",
+      "date": "2026-04-17",
+      "decision": "HTML5 native drag-and-drop (no library)",
+      "rationale": "Kanban + Calendar drag flows are simple enough (single drag source, per-column/per-day drop targets) that a library adds weight without value. Native events integrate cleanly with Svelte 5 runes.",
+      "details": "dataTransfer carries {draftId, platform} as application/x-corvus-event MIME; drop handler calls the /schedule or /status API and invalidateAll()"
+    }
+  ],
+
+  "phases": [
+    {
+      "id": "phase-2a",
+      "name": "Approval Queue MVP",
+      "status": "completed",
+      "started": "2026-04-16",
+      "completed": "2026-04-16",
+      "description": "Local web dashboard showing pending content drafts with per-platform approve/reject/edit, replacing Discord-based approvals",
+      "deliverables": [
+        "SvelteKit app at ~/Dev/corvus-dashboard",
+        "Vault file I/O (drafts + adapted)",
+        "Approval queue UI with status/platform filters",
+        "LaunchAgent for always-on at http://localhost:4321",
+        "E2E tests for approval flow"
+      ]
+    },
+    {
+      "id": "phase-2b",
+      "name": "Calendar + Kanban views",
+      "status": "in-progress",
+      "started": "2026-04-17",
+      "completed": null,
+      "description": "Kanban board for pipeline visualization; Calendar (month + week) for scheduled content with drag-to-reschedule",
+      "deliverables": [
+        "Kanban route with drag-between-columns and schedule modal",
+        "Calendar route with month and week views",
+        "Drag-between-days reschedule (calendar)",
+        "Click-to-reschedule modal (calendar)",
+        "Playwright E2E coverage for calendar"
+      ]
+    },
+    {
+      "id": "phase-2c",
+      "name": "Analytics dashboard",
+      "status": "planned",
+      "started": null,
+      "completed": null,
+      "description": "Charts and metrics for content pipeline throughput and performance",
+      "deliverables": []
+    },
+    {
+      "id": "phase-2d",
+      "name": "Discord integration + preference learning",
+      "status": "planned",
+      "started": null,
+      "completed": null,
+      "description": "Discord thread creation for discussion; capture approval/edit deltas into preference file",
+      "deliverables": []
+    },
+    {
+      "id": "phase-3",
+      "name": "Publishing",
+      "status": "planned",
+      "started": null,
+      "completed": null,
+      "description": "Push approved+scheduled posts to each platform",
+      "deliverables": []
+    }
+  ],
+
+  "changelog": [
+    {
+      "date": "2026-04-16",
+      "author": "Claude + Mike",
+      "session": "Session 1 — Phase 2a Approval Queue MVP",
+      "changes": [
+        "Initialized SvelteKit + Tailwind project at ~/Dev/corvus-dashboard",
+        "Built vault file I/O, grouping, frontmatter utilities with unit tests",
+        "Shipped approval queue UI with status/platform filters and inline edit",
+        "Added LaunchAgent for always-on service at localhost:4321",
+        "E2E tests for display, approval, and filtering"
+      ]
+    },
+    {
+      "date": "2026-04-17",
+      "author": "Claude + Mike",
+      "session": "Session 2 — Phase 2b Calendar view",
+      "changes": [
+        "Added /calendar route with month + week views",
+        "Built CalendarDayCell + CalendarEventChip components with HTML5 drag-and-drop",
+        "Drag-between-days reschedule wired to existing /api/adapted/:id/:platform/schedule endpoint",
+        "Click-to-reschedule modal with date input for precise moves",
+        "Added Calendar nav item to +layout.svelte",
+        "3 new Playwright E2E tests (render, click-reschedule, week view); all 6 suite tests green",
+        "Added scheduled fixture files (bluesky + threads) for draft-2026-04-15-002"
+      ]
+    }
+  ]
+}

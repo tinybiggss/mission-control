@@ -80,6 +80,7 @@ export function parseDraftFile(content: string, filePath: string): Draft {
     video_brief: asString(data.video_brief),
     napkin_asset: asString(data.napkin_asset),
     gamma_asset: asString(data.gamma_asset),
+    discord_thread_url: asString(data.discord_thread_url),
     body: parsed.content
   };
 }
@@ -96,6 +97,9 @@ export function parseAdaptedFile(content: string, filePath: string): AdaptedVers
     filePath,
     status: (asString(data.status, 'pending-approval') as AdaptedVersion['status']),
     scheduled_date: asString(data.scheduled_date),
+    published_date: asString(data.published_date),
+    platform_post_id: asString(data.platform_post_id),
+    publish_error: asString(data.publish_error),
     character_count: asNumber(data.character_count),
     visual_required: asBoolean(data.visual_required),
     visual_brief: asString(data.visual_brief),

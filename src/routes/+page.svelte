@@ -9,7 +9,7 @@
 
   let { data }: { data: PageData } = $props();
 
-  let filter = $state<FilterState>({ status: 'pending-approval', platform: 'all' });
+  let filter = $state<FilterState>({ status: 'pending-approval', platform: 'all', pillar: 'all', scoreMin: null, scoreMax: null });
   let toast = $state<{ message: string; type: 'info' | 'success' | 'error' } | null>(null);
 
   const filteredGroups = $derived(filterGroups(data.groups, filter));
@@ -19,11 +19,18 @@
     setTimeout(() => (toast = null), 3000);
   }
 
-  async function handleStatusChange(draftId: string, platform: string, newStatus: AdaptedStatus) {
+  async function handleStatusChange(
+    draftId: string,
+    platform: string,
+    newStatus: AdaptedStatus,
+    reason?: string
+  ) {
+    const payload: { status: AdaptedStatus; reason?: string } = { status: newStatus };
+    if (reason) payload.reason = reason;
     const res = await fetch(`/api/adapted/${encodeURIComponent(draftId)}/${encodeURIComponent(platform)}/status`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus })
+      body: JSON.stringify(payload)
     });
     if (!res.ok) {
       const msg = (await res.json().catch(() => ({ message: res.statusText }))).message || res.statusText;
@@ -84,6 +91,8 @@
 <FilterBar
   filter={filter}
   platforms={data.platforms}
+  pillars={data.pillars}
+  scoreBounds={data.scoreBounds}
   counts={data.counts}
   onFilterChange={(next) => (filter = next)}
 />

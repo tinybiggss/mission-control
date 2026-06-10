@@ -8,7 +8,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/opt/homebrew/bin/node</string>
-        <string>/Users/michaeljones/Dev/corvus-dashboard/build/index.js</string>
+        <string>/Users/michaeljones/Dev/corvus-dashboard/server.js</string>
     </array>
 
     <key>WorkingDirectory</key>
@@ -21,9 +21,11 @@
         <key>PORT</key>
         <string>4321</string>
         <key>HOST</key>
-        <string>127.0.0.1</string>
+        <string>0.0.0.0</string>
         <key>PATH</key>
         <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>DISCORD_RT_CONTENT_CHANNEL_ID</key>
+        <string>1490786978977939496</string>
     </dict>
 
     <key>RunAtLoad</key>

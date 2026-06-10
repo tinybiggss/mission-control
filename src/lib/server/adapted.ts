@@ -85,6 +85,37 @@ export async function updateAdaptedStatus(
   await writeFile(version.filePath, output, 'utf-8');
 }
 
+/**
+ * Set scheduled_date and move status to 'scheduled'. Pass empty date to
+ * unschedule (clears date and reverts status to 'approved').
+ */
+export async function updateAdaptedSchedule(
+  vaultRoot: string,
+  draftId: string,
+  platform: string,
+  date: string
+): Promise<void> {
+  const trimmed = (date ?? '').trim();
+  if (trimmed && !/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    throw new Error(`Invalid date format (expected YYYY-MM-DD): ${trimmed}`);
+  }
+
+  const version = await readAdapted(vaultRoot, draftId, platform);
+  if (!version) {
+    throw new Error(`Adapted version not found: ${draftId}/${platform}`);
+  }
+
+  const raw = await readFile(version.filePath, 'utf-8');
+  const parsed = matter(raw);
+  const data = {
+    ...parsed.data,
+    scheduled_date: trimmed,
+    status: trimmed ? 'scheduled' : 'approved'
+  };
+  const output = serializeFrontmatter(data, parsed.content);
+  await writeFile(version.filePath, output, 'utf-8');
+}
+
 /** Update body content and recompute character_count */
 export async function updateAdaptedContent(
   vaultRoot: string,
