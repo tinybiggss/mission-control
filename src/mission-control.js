@@ -7,6 +7,7 @@
  *   - Signal-filtered Activity Feed
  *
  * Storage: JSON files in ~/.openclaw/workspace/mission-control/
+ *          Dismissed Three-Things state: ~/.openclaw/workspace/Corvus/Operations/mission-control-dismissed.json
  * Cron failures: read live from jobs-state.json
  */
 
@@ -49,6 +50,56 @@ function safeWriteJson(filePath, data) {
     console.error(`[mission-control] Failed to write ${filePath}: ${e.message}`);
     return false;
   }
+}
+
+// ============================================================================
+// DISMISSED "THREE THINGS" STATE
+// ============================================================================
+
+const DISMISSED_FILE = path.join(
+  process.env.HOME || "/Users/michaeljones",
+  ".openclaw/workspace/Corvus/Operations/mission-control-dismissed.json"
+);
+
+/**
+ * Shape: { dismissedIds: [{ id, dismissedAt }] }
+ * Read once on module load + re-read on every change so multi-process
+ * (or restart) scenarios stay consistent.
+ */
+function readDismissed() {
+  return safeReadJson(DISMISSED_FILE, { dismissedIds: [] });
+}
+
+function writeDismissed(data) {
+  ensureDataDir(path.dirname(DISMISSED_FILE));
+  return safeWriteJson(DISMISSED_FILE, data);
+}
+
+function addDismissed(id) {
+  const data = readDismissed();
+  if (data.dismissedIds.some((d) => d.id === id)) return data;
+  data.dismissedIds.push({ id, dismissedAt: new Date().toISOString() });
+  writeDismissed(data);
+  return data;
+}
+
+function removeDismissed(id) {
+  const data = readDismissed();
+  const before = data.dismissedIds.length;
+  data.dismissedIds = data.dismissedIds.filter((d) => d.id !== id);
+  const changed = data.dismissedIds.length !== before;
+  if (changed) writeDismissed(data);
+  return data;
+}
+
+function isDismissed(id) {
+  const data = readDismissed();
+  return data.dismissedIds.some((d) => d.id === id);
+}
+
+function getDismissedIdSet() {
+  const data = readDismissed();
+  return new Set(data.dismissedIds.map((d) => d.id));
 }
 
 // ============================================================================
@@ -132,10 +183,51 @@ function writeBrainDump(dataDir, tasks) {
   return safeWriteJson(path.join(dataDir, BRAIN_DUMP_FILE), tasks);
 }
 
+/**
+ * Derive the `mode` for a task based on its existing fields.
+ * Mike's decision (2026-06-25): the field is *derived* from assignee/tags
+ * at creation time, then persisted so users can override it later.
+ *
+ *   - Explicit `mode` passed in (e.g. { mode: "mixed" }) wins outright
+ *   - Tasks assigned to "corvus" + #assigned-corvus tag → "autonomous"
+ *   - Tasks with #planning tag                          → "planning"
+ *   - Tasks with #assigned-mike tag                     → "planning"
+ *   - Everything else (legacy, unknown assignee)        → null (legacy flag)
+ *
+ * @param {object} parsed - the parsed Brain Dump fields (tags, assignee, etc.)
+ * @returns {"planning"|"autonomous"|"mixed"|null}
+ */
+function deriveMode(parsed = {}) {
+  if (parsed.mode) return parsed.mode;
+  const tags = (parsed.tags || []).map((t) => String(t).toLowerCase().replace(/^#/, ""));
+
+  // Explicit tag wins
+  if (tags.includes("assigned-corvus") && parsed.assignee === "corvus") {
+    return "autonomous";
+  }
+  if (tags.includes("planning") || tags.includes("assigned-mike")) {
+    return "planning";
+  }
+
+  // Assignee-only derivation
+  if (parsed.assignee === "corvus" || parsed.assignee === "claude") {
+    return "autonomous";
+  }
+  if (parsed.assignee === "mike" || parsed.assignee === "anna") {
+    return "planning";
+  }
+
+  // Legacy / unknown — null means "needs triage" in the UI
+  return null;
+}
+
 function addBrainDump(dataDir, rawText, parsed = {}) {
   const tasks = readBrainDump(dataDir);
   const now = new Date().toISOString();
   const id = `bd_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const explicitMode = parsed.mode || null;
+  const derived = explicitMode || deriveMode(parsed);
+  const modeSetBy = explicitMode ? "mike" : "auto";
   const task = {
     id,
     rawText,
@@ -151,6 +243,11 @@ function addBrainDump(dataDir, rawText, parsed = {}) {
     updatedAt: now,
     postponeCount: 0,
     iceboxFrozenUntil: null,
+    // Planning vs Autonomous (Phase 4, 2026-06-25)
+    // Values: "planning" | "autonomous" | "mixed" | null (legacy = needs triage)
+    mode: derived,
+    modeSetAt: now,
+    modeSetBy, // "mike" | "corvus" | "auto"
     // Phase 2: Obsidian sync fields
     obsidianRef: null,    // "[[2026-06-09#^task-7d4f]]"
     blockId: null,        // "task-7d4f"
@@ -167,7 +264,40 @@ function updateBrainDumpTask(dataDir, id, updates) {
   const tasks = readBrainDump(dataDir);
   const idx = tasks.findIndex((t) => t.id === id);
   if (idx === -1) return null;
-  tasks[idx] = { ...tasks[idx], ...updates, updatedAt: new Date().toISOString() };
+  const existing = tasks[idx];
+  const now = new Date().toISOString();
+
+  // If mode is being explicitly changed, stamp it
+  const next = { ...existing, ...updates, updatedAt: now };
+  if (
+    Object.prototype.hasOwnProperty.call(updates, "mode") &&
+    updates.mode !== existing.mode
+  ) {
+    next.modeSetAt = now;
+    next.modeSetBy = updates.modeSetBy || "mike";
+  }
+  // Backfill mode if it was null and the caller changed assignee/tags
+  if (
+    existing.mode == null &&
+    next.mode == null &&
+    (updates.assignee !== undefined || updates.tags !== undefined)
+  ) {
+    const derived = deriveMode({
+      assignee: next.assignee,
+      tags: next.tags,
+    });
+    if (derived) {
+      next.mode = derived;
+      next.modeSetAt = now;
+      next.modeSetBy = "auto";
+    }
+  }
+  // Bump lastTouchedAt if the caller didn't pass it explicitly (so
+  // the Outstanding view's age-sort stays meaningful).
+  if (!Object.prototype.hasOwnProperty.call(updates, "lastTouchedAt")) {
+    next.lastTouchedAt = now;
+  }
+  tasks[idx] = next;
   writeBrainDump(dataDir, tasks);
   return tasks[idx];
 }
@@ -177,6 +307,46 @@ function deleteBrainDumpTask(dataDir, id) {
   const next = tasks.filter((t) => t.id !== id);
   writeBrainDump(dataDir, next);
   return tasks.length !== next.length;
+}
+
+/**
+ * Mirrors `deriveColumn()` semantics from the frontend so server-side
+ * filtering matches what the user sees in the kanban.
+ * Allowed filter values:
+ *   - "all"                          → no filter
+ *   - "unsorted"                     → status=unsorted OR (no priority AND not icebox)
+ *   - "urgent-important"             → priority=urgent-important (Do First)
+ *   - "schedule" | "important-not-urgent"
+ *   - "delegate"   | "urgent-not-important"
+ *   - "icebox"                      → status=icebox
+ */
+function filterTasksByPriority(tasks, priority) {
+  switch (priority) {
+    case "unsorted":
+      return tasks.filter(
+        (t) =>
+          t.status === "unsorted" ||
+          t.status === "backlog" ||
+          (!t.priority && t.status !== "icebox"),
+      );
+    case "urgent-important":
+      return tasks.filter((t) => t.priority === "urgent-important");
+    case "schedule":
+    case "important-not-urgent":
+      return tasks.filter((t) => t.priority === "important-not-urgent");
+    case "delegate":
+    case "urgent-not-important":
+      return tasks.filter(
+        (t) =>
+          t.priority === "urgent-not-important" ||
+          t.assignee === "corvus" ||
+          t.assignee === "claude",
+      );
+    case "icebox":
+      return tasks.filter((t) => t.status === "icebox");
+    default:
+      return tasks;
+  }
 }
 
 // ============================================================================
@@ -256,12 +426,15 @@ function dismissActivity(dataDir, id) {
  */
 function getThreeThings(getOpenClawDir, dataDir) {
   const items = [];
+  const dismissedSet = getDismissedIdSet();
 
   // 1. Cron failures (red)
   const failures = getRecentCronFailures(getOpenClawDir, 24);
   for (const f of failures.slice(0, 3)) {
+    const id = `cron:${f.id}`;
+    if (dismissedSet.has(id)) continue;
     items.push({
-      id: `cron:${f.id}`,
+      id,
       kind: "failure",
       icon: "🔴",
       severity: "critical",
@@ -294,8 +467,10 @@ function getThreeThings(getOpenClawDir, dataDir) {
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
   for (const d of pendingDecisions.slice(0, 3)) {
+    const id = `task:${d.id}`;
+    if (dismissedSet.has(id)) continue;
     items.push({
-      id: `task:${d.id}`,
+      id,
       kind: "decision",
       icon: "🟡",
       severity: "warning",
@@ -321,9 +496,11 @@ function getThreeThings(getOpenClawDir, dataDir) {
     .slice(0, 3);
 
   for (const u of unacked) {
+    const id = `act:${u.id}`;
+    if (dismissedSet.has(id)) continue;
     const icon = u.type === "failure" ? "🔴" : u.type === "decision" ? "🟡" : "🔵";
     items.push({
-      id: `act:${u.id}`,
+      id,
       kind: u.type,
       icon,
       severity: u.severity || "info",
@@ -388,6 +565,257 @@ function getFilteredFeed(dataDir) {
 }
 
 // ============================================================================
+// HELPERS — Today / Outstanding / Mode shaping
+// ============================================================================
+
+/**
+ * Map task.status to a string used in the priority chip (🔺/⏫/🔼/⏬).
+ * Mirrors the kanban's column mapping.
+ */
+function priorityEmojiForTask(t) {
+  if (t.status === "icebox") return "🧊";
+  if (t.priority === "urgent-important") return "🔺";
+  if (t.priority === "important-not-urgent") return "⏫";
+  if (t.priority === "urgent-not-important") return "🔼";
+  return null;
+}
+
+const PRIORITY_RANK = { "🔺": 4, "⏫": 3, "🔼": 2, "⏬": 1, "🧊": 0 };
+
+/**
+ * Compute age (in days, integer) from a task's most-recent activity.
+ * Uses lastTouchedAt when present, else updatedAt, else createdAt.
+ */
+function ageDaysForTask(t, nowMs = Date.now()) {
+  const ts = t.lastTouchedAt || t.updatedAt || t.createdAt;
+  if (!ts) return 0;
+  const ms = nowMs - new Date(ts).getTime();
+  if (Number.isNaN(ms)) return 0;
+  return Math.max(0, Math.floor(ms / 86400000));
+}
+
+/**
+ * Return YYYY-MM-DD for today in America/Los_Angeles.
+ * Same offset math as getTodayDate() in mc-phase2.js (PDT = UTC-7).
+ */
+function todayDateLA() {
+  const d = new Date();
+  const offset = d.getTimezoneOffset(); // minutes from UTC
+  const laOffset = 420; // PDT = UTC-7 = 420 min
+  const adjusted = new Date(d.getTime() - (offset - laOffset) * 60000);
+  return adjusted.toISOString().slice(0, 10);
+}
+
+/**
+ * Shape a task into the compact card the Today/Outstanding views expect.
+ * Pure function — no IO.
+ */
+function shapeTaskForView(t) {
+  const priorityEmoji = priorityEmojiForTask(t);
+  const mode = t.mode == null ? null : t.mode;
+  return {
+    id: t.id,
+    title: t.title || t.rawText || "Untitled",
+    status: t.status,
+    priority: priorityEmoji,
+    due: t.due || null,
+    project: t.project || null,
+    assignee: t.assignee || null,
+    tags: t.tags || [],
+    mode,
+    modeLabel: mode, // alias kept for legacy JS consumers
+    modeSetBy: t.modeSetBy || null,
+    modeSetAt: t.modeSetAt || null,
+    postponeCount: t.postponeCount || 0,
+    ageDays: ageDaysForTask(t),
+    lastTouchedAt: t.lastTouchedAt || t.updatedAt || t.createdAt || null,
+    createdAt: t.createdAt || null,
+    source: t.source || "brain-dump",
+    obsidianRef: t.obsidianRef || null,
+    blockId: t.blockId || null,
+  };
+}
+
+/**
+ * Sort tasks for the Today view: priority desc, then age desc.
+ */
+function sortForToday(tasks) {
+  return [...tasks].sort((a, b) => {
+    const pa = PRIORITY_RANK[a.priority] || 0;
+    const pb = PRIORITY_RANK[b.priority] || 0;
+    if (pb !== pa) return pb - pa;
+    return (b.ageDays || 0) - (a.ageDays || 0);
+  });
+}
+
+/**
+ * Sort tasks for the Outstanding view: age desc, then priority desc.
+ */
+function sortForOutstanding(tasks) {
+  return [...tasks].sort((a, b) => {
+    const ad = b.ageDays || 0;
+    const bd = a.ageDays || 0;
+    if (ad !== bd) return ad - bd;
+    const pa = PRIORITY_RANK[a.priority] || 0;
+    const pb = PRIORITY_RANK[b.priority] || 0;
+    return pb - pa;
+  });
+}
+
+/**
+ * Filter tasks for the "Today" view (Mike's inbox).
+ *
+ * Mike's confirmed rule (2026-06-25 13:11 PDT):
+ *   - mode ∈ {"planning","mixed", null}      (legacy tasks that haven't been
+ *                                            triaged yet also land here)
+ *   - status != "done"                       (no done tasks)
+ *   - due == today || due == null || due <= today
+ *   - Sort: priority desc, then age desc
+ *
+ * Does NOT include mode == "autonomous" tasks. Those live in the Agents tab.
+ */
+function filterTasksForToday(tasks, options = {}) {
+  const today = options.today || todayDateLA();
+  return tasks.filter((t) => {
+    if (t.status === "done" || t.status === "archived") return false;
+    if (t.mode === "autonomous") return false;
+    // legacy null + planning + mixed all qualify
+    if (t.due == null) return true;
+    return t.due <= today;
+  });
+}
+
+/**
+ * Filter tasks for the "Outstanding" view: all open tasks.
+ *   - status != "done" && status != "archived"
+ *   - mode filter is opt-in (so the Outstanding view can show everything)
+ */
+function filterTasksForOutstanding(tasks) {
+  return tasks.filter((t) => t.status !== "done" && t.status !== "archived");
+}
+
+/**
+ * Parse a query string value as an array. Supports `?priority=🔺&priority=⏫`.
+ * Returns [] if nothing present.
+ */
+function parseArrayParam(searchParams, name) {
+  const all = searchParams.getAll(name);
+  if (all.length === 0) return [];
+  // Some clients send a single comma-separated value
+  return all
+    .flatMap((v) => v.split(","))
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
+function applyPriorityFilter(tasks, priorities) {
+  if (!priorities || priorities.length === 0) return tasks;
+  const set = new Set(priorities);
+  return tasks.filter((t) => {
+    if (set.has(t.priority)) return true;
+    // Allow legacy "all" placeholder
+    return set.has("all");
+  });
+}
+
+function applyProjectFilter(tasks, projects) {
+  if (!projects || projects.length === 0) return tasks;
+  const set = new Set(projects.map((p) => String(p).toLowerCase()));
+  return tasks.filter((t) => {
+    const proj = (t.project || "").toLowerCase();
+    return proj && set.has(proj);
+  });
+}
+
+function applyModeFilter(tasks, modes) {
+  if (!modes || modes.length === 0) return tasks;
+  const set = new Set(modes);
+  return tasks.filter((t) => {
+    if (t.mode == null) return set.has("legacy") || set.has("null");
+    return set.has(t.mode);
+  });
+}
+
+// ============================================================================
+// PROJECT REGISTRY (lightweight — flat JSON file)
+// ============================================================================
+
+const PROJECT_REGISTRY_FILE = "projects-registry.json";
+
+/**
+ * Project registry stores promoted tasks. Each entry is:
+ *   {
+ *     id: "proj_xxxxx",
+ *     title: "...",
+ *     slug: "kebab-case",
+ *     parentId: "bd_xxx" | null,
+ *     createdAt: ISO,
+ *     promotedToProjectAt: ISO,
+ *     sourceTaskId: "bd_xxx",
+ *     status: "open" | "in_progress" | "done" | "archived",
+ *     links: { obsidianPath?, tags? }
+ *   }
+ */
+function readProjectRegistry(dataDir) {
+  ensureDataDir(dataDir);
+  return safeReadJson(path.join(dataDir, PROJECT_REGISTRY_FILE), []);
+}
+
+function writeProjectRegistry(dataDir, projects) {
+  ensureDataDir(dataDir);
+  return safeWriteJson(path.join(dataDir, PROJECT_REGISTRY_FILE), projects);
+}
+
+function slugify(s) {
+  return String(s || "untitled")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64) || "untitled";
+}
+
+function promoteTaskToProject(dataDir, taskId) {
+  const tasks = readBrainDump(dataDir);
+  const idx = tasks.findIndex((t) => t.id === taskId);
+  if (idx === -1) return { ok: false, error: "Task not found" };
+  const task = tasks[idx];
+
+  const now = new Date().toISOString();
+  const project = {
+    id: `proj_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    title: task.title,
+    slug: slugify(task.title),
+    parentId: task.parentId || null,
+    createdAt: now,
+    promotedToProjectAt: now,
+    sourceTaskId: task.id,
+    status: "open",
+    links: {
+      tags: task.tags || [],
+    },
+  };
+
+  const registry = readProjectRegistry(dataDir);
+  registry.push(project);
+  writeProjectRegistry(dataDir, registry);
+
+  // Update the task: type → "project", link to project
+  tasks[idx] = {
+    ...task,
+    type: "project",
+    promotedToProjectAt: now,
+    promotedToProjectId: project.id,
+    updatedAt: now,
+  };
+  if (task.parentId) {
+    project.parentId = task.parentId;
+  }
+  writeBrainDump(dataDir, tasks);
+
+  return { ok: true, project };
+}
+
+// ============================================================================
 // HTTP HANDLERS
 // ============================================================================
 
@@ -414,13 +842,99 @@ function createMissionControlAPI(deps) {
     },
 
     /**
-     * GET /api/mission/braindump
-     * POST /api/mission/braindump  { rawText, parsed? }
-     * PATCH /api/mission/braindump/:id  { ...updates }
-     * DELETE /api/mission/braindump/:id
+     * POST /api/mission/three-things/dismiss   { id }
+     * Removes an item from the Three Things list (persists to disk).
+     */
+    threeThingsDismiss(req, res) {
+      let body = "";
+      req.on("data", (chunk) => (body += chunk));
+      req.on("end", () => {
+        try {
+          const { id } = JSON.parse(body);
+          if (!id || typeof id !== "string") {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "id is required" }));
+            return;
+          }
+          addDismissed(id);
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: true, id }, null, 2));
+        } catch (e) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Invalid JSON: " + e.message }));
+        }
+      });
+    },
+
+    /**
+     * POST /api/mission/three-things/undismiss  { id }
+     * Restores a previously dismissed item.
+     */
+    threeThingsUndismiss(req, res) {
+      let body = "";
+      req.on("data", (chunk) => (body += chunk));
+      req.on("end", () => {
+        try {
+          const { id } = JSON.parse(body);
+          if (!id || typeof id !== "string") {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "id is required" }));
+            return;
+          }
+          removeDismissed(id);
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: true, id }, null, 2));
+        } catch (e) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Invalid JSON: " + e.message }));
+        }
+      });
+    },
+
+    /**
+     * GET /api/mission/three-things/dismissed
+     * Returns the dismissed-IDs list (for debugging / UI badge).
+     */
+    threeThingsDismissedList(req, res) {
+      const data = readDismissed();
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(data, null, 2));
+    },
+
+    /**
+     * GET /api/mission/braindump?priority=urgent-important
+     * Optional ?priority= filter — restricts the returned task set by priority.
+     * Special values:
+     *   "all"         — no filter (default)
+     *   "unsorted"    — status=unsorted OR no priority set
+     *   "urgent-important" | "important-not-urgent" | "urgent-not-important" — by priority field
+     *   "schedule" / "delegate" / "icebox" — semantic aliases that match the kanban column keys
      */
     brainDumpList(req, res) {
-      const tasks = readBrainDump(dataDir);
+      const url = new URL(req.url, "http://x");
+      const priority = url.searchParams.get("priority");
+      // eslint-disable-next-line no-unused-vars
+      const project = url.searchParams.get("project");
+      // eslint-disable-next-line no-unused-vars
+      const mode = url.searchParams.get("mode");
+      let tasks = readBrainDump(dataDir);
+
+      if (priority && priority !== "all") {
+        tasks = filterTasksByPriority(tasks, priority);
+      }
+      const priorities = parseArrayParam(url.searchParams, "priority");
+      if (priorities.length > 0 && priority !== "all") {
+        tasks = applyPriorityFilter(tasks, priorities);
+      }
+      const projects = parseArrayParam(url.searchParams, "project");
+      if (projects.length > 0) {
+        tasks = applyProjectFilter(tasks, projects);
+      }
+      const modes = parseArrayParam(url.searchParams, "mode");
+      if (modes.length > 0) {
+        tasks = applyModeFilter(tasks, modes);
+      }
+
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ tasks }, null, 2));
     },
@@ -526,6 +1040,160 @@ function createMissionControlAPI(deps) {
     },
 
     /**
+     * GET /api/mission/today
+     * Returns Mike's inbox for today (planning-mode + legacy, not autonomous).
+     *
+     * Query params:
+     *   ?priority=🔺&priority=⏫  - filter by priority emoji(s)
+     *   ?project=rt               - filter by project tag(s)
+     *   ?mode=planning            - filter by mode (default: planning+mixed+legacy)
+     *
+     * Response shape:
+     *   {
+     *     tasks: [...],           // shaped via shapeTaskForView
+     *     count: N,
+     *     planningCount: N,
+     *     autonomousCount: N,     // 0 by design (Today excludes autonomous)
+     *     legacyCount: N,         // tasks with mode == null
+     *     mixedCount: N,
+     *     asOf: ISO,
+     *     today: "YYYY-MM-DD"
+     *   }
+     */
+    today(req, res) {
+      const url = new URL(req.url, "http://x");
+      const today = todayDateLA();
+      const all = readBrainDump(dataDir);
+      let tasks = filterTasksForToday(all, { today });
+
+      // Mode + project filters run on raw tasks (they use raw fields).
+      const projects = parseArrayParam(url.searchParams, "project");
+      tasks = applyProjectFilter(tasks, projects);
+
+      // Priority filter needs the shaped emoji form. Shape first, then filter.
+      let shaped = tasks.map((t) => shapeTaskForView(t));
+      const priorities = parseArrayParam(url.searchParams, "priority");
+      shaped = applyPriorityFilter(shaped, priorities);
+
+      // Counts (computed against the *pre-priority-filter* set so the
+      // header summary stays meaningful even when the user filters).
+      const counts = shaped.reduce(
+        (acc, t) => {
+          if (t.mode == null) acc.legacyCount++;
+          else if (t.mode === "planning") acc.planningCount++;
+          else if (t.mode === "mixed") acc.mixedCount++;
+          else if (t.mode === "autonomous") acc.autonomousCount++;
+          return acc;
+        },
+        { planningCount: 0, autonomousCount: 0, mixedCount: 0, legacyCount: 0 }
+      );
+
+      shaped = sortForToday(shaped).map((t) => {
+        // Tag overdue tasks so the UI can color them red
+        if (t.due && t.due < today) t.overdue = true;
+        return t;
+      });
+
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify(
+          {
+            tasks: shaped,
+            count: shaped.length,
+            ...counts,
+            asOf: new Date().toISOString(),
+            today,
+          },
+          null,
+          2
+        )
+      );
+    },
+
+    /**
+     * GET /api/mission/tasks
+     * General-purpose outstanding tasks endpoint.
+     * Returns ALL open tasks (not just today), filtered by query params.
+     *
+     * Query params:
+     *   ?priority=🔺&priority=⏫  - filter by priority emoji(s)
+     *   ?project=rt               - filter by project tag(s)
+     *   ?mode=autonomous          - filter by mode
+     *   ?status=todo              - filter by status (single)
+     *
+     * Sort: age desc, then priority desc.
+     */
+    tasksList(req, res) {
+      const url = new URL(req.url, "http://x");
+      const all = readBrainDump(dataDir);
+      let tasks = filterTasksForOutstanding(all);
+
+      // Mode + project + status filters use raw fields — safe to run before shaping.
+      const projects = parseArrayParam(url.searchParams, "project");
+      tasks = applyProjectFilter(tasks, projects);
+      const modes = parseArrayParam(url.searchParams, "mode");
+      tasks = applyModeFilter(tasks, modes);
+      const status = url.searchParams.get("status");
+      if (status) tasks = tasks.filter((t) => t.status === status);
+
+      // Shape then priority-filter so ?priority=🔺 matches the emoji form.
+      let shaped = tasks.map((t) => shapeTaskForView(t));
+      const priorities = parseArrayParam(url.searchParams, "priority");
+      shaped = applyPriorityFilter(shaped, priorities);
+      shaped = sortForOutstanding(shaped);
+
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify(
+          {
+            tasks: shaped,
+            count: shaped.length,
+            asOf: new Date().toISOString(),
+          },
+          null,
+          2
+        )
+      );
+    },
+
+    /**
+     * GET /api/mission/outstanding
+     * Backwards-compat alias for /api/mission/tasks — same shape.
+     * Returns ALL open tasks sorted by age (default: age desc).
+     */
+    outstanding(req, res) {
+      return this.tasksList(req, res);
+    },
+
+    /**
+     * POST /api/mission/tasks/:id/promote-to-project
+     * "Task → Project (defer)" — when a task has ≥3 postponements OR the user
+     * manually triggers it, convert the task into a project entry.
+     *
+     * Returns: { ok: true, project: {...} } or { ok: false, error }
+     */
+    promoteToProject(req, res, id) {
+      const result = promoteTaskToProject(dataDir, id);
+      if (!result.ok) {
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify(result, null, 2));
+        return;
+      }
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(result, null, 2));
+    },
+
+    /**
+     * GET /api/mission/projects
+     * Returns the project registry.
+     */
+    projectsList(req, res) {
+      const projects = readProjectRegistry(dataDir);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ projects, count: projects.length }, null, 2));
+    },
+
+    /**
      * GET /api/mission/cron-failures
      */
     cronFailures(req, res) {
@@ -550,8 +1218,39 @@ module.exports = {
   writeBrainDump,
   addBrainDump,
   updateBrainDumpTask,
+  deleteBrainDumpTask,
+  filterTasksByPriority,
   readActivity,
   appendActivity,
   acknowledgeActivity,
+  dismissActivity,
+  // Dismissed Three-Things state
+  readDismissed,
+  writeDismissed,
+  addDismissed,
+  removeDismissed,
+  isDismissed,
+  getDismissedIdSet,
+  // Planning vs Autonomous (Phase 4)
+  deriveMode,
+  filterTasksForToday,
+  filterTasksForOutstanding,
+  shapeTaskForView,
+  sortForToday,
+  sortForOutstanding,
+  applyPriorityFilter,
+  applyProjectFilter,
+  applyModeFilter,
+  parseArrayParam,
+  priorityEmojiForTask,
+  ageDaysForTask,
+  todayDateLA,
+  // Project registry (Phase 4)
+  readProjectRegistry,
+  writeProjectRegistry,
+  promoteTaskToProject,
+  slugify,
+  PROJECT_REGISTRY_FILE,
   DEFAULT_DATA_DIR,
+  DISMISSED_FILE,
 };

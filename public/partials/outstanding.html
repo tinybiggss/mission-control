@@ -1,0 +1,41 @@
+<!-- Mission Control Phase 4: Outstanding view (all open tasks) -->
+<div class="mc-outstanding" id="mc-outstanding-root">
+  <div class="mc-outstanding-header">
+    <div class="mc-outstanding-title">
+      <span class="mc-outstanding-emoji">📋</span>
+      <span class="mc-outstanding-label">Outstanding</span>
+      <span class="mc-outstanding-count" id="mc-outstanding-count">—</span>
+    </div>
+    <div class="mc-outstanding-sort">
+      <label for="mc-outstanding-sort-select">Sort:</label>
+      <select id="mc-outstanding-sort-select">
+        <option value="age">Age (oldest first)</option>
+        <option value="age-asc">Age (newest first)</option>
+        <option value="priority">Priority</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="mc-outstanding-filters">
+    <div class="mc-filter-row" id="mc-outstanding-priority-filter" role="toolbar" aria-label="Outstanding priority filter">
+      <span class="mc-filter-label">Priority:</span>
+      <button type="button" class="mc-pill mc-pill-active" data-priority="all">All</button>
+      <button type="button" class="mc-pill" data-priority="🔺">🔺</button>
+      <button type="button" class="mc-pill" data-priority="⏫">⏫</button>
+      <button type="button" class="mc-pill" data-priority="🔼">🔼</button>
+      <button type="button" class="mc-pill" data-priority="🧊">🧊</button>
+    </div>
+    <div class="mc-filter-row" id="mc-outstanding-mode-filter" role="toolbar" aria-label="Outstanding mode filter">
+      <span class="mc-filter-label">Mode:</span>
+      <button type="button" class="mc-pill mc-pill-active" data-mode="all">All</button>
+      <button type="button" class="mc-pill" data-mode="planning">🤝 Planning</button>
+      <button type="button" class="mc-pill" data-mode="autonomous">🤖 Autonomous</button>
+      <button type="button" class="mc-pill" data-mode="mixed">🔀 Mixed</button>
+      <button type="button" class="mc-pill" data-mode="legacy">⚠️ Legacy</button>
+    </div>
+  </div>
+
+  <div class="mc-outstanding-list" id="mc-outstanding-list">
+    <div class="mc-empty">Loading…</div>
+  </div>
+</div>

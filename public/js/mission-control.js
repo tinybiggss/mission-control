@@ -20,7 +20,7 @@
   const MC = {
     state: {
       threeThings: { items: [], total: 0, sources: {} },
-      brainDump: { tasks: [] },
+      brainDump: { tasks: [], filter: "all" },
       feed: { items: [], digestCount: 0, neverShowCount: 0 },
       lastUpdated: null,
     },
@@ -75,8 +75,10 @@
   }
 
   async function refreshBrainDump() {
-    const data = await fetchJson("/api/mission/braindump");
-    if (data) MC.state.brainDump = data;
+    const filter = MC.state.brainDump.filter || "all";
+    const qs = filter && filter !== "all" ? `?priority=${encodeURIComponent(filter)}` : "";
+    const data = await fetchJson(`/api/mission/braindump${qs}`);
+    if (data) MC.state.brainDump = { ...MC.state.brainDump, ...data };
   }
 
   async function refreshFeed() {
@@ -180,12 +182,95 @@
     const url = btn.dataset.url;
     if (action === "open" && url) {
       window.open(url, "_blank");
-    } else if (action === "dismiss") {
-      // For cron failures, no real dismiss yet — just visually fade
-      // (we'd need to add a 'dismissed' field; for now hide and refetch in 30s)
-      btn.closest(".mc-item")?.classList.add("mc-dismissed");
-      setTimeout(() => refreshAll(), 500);
+      return;
     }
+    if (action !== "dismiss" || !id) return;
+
+    // Optimistic: remove from local state immediately so it can't
+    // reappear from a 500ms re-fetch.
+    const itemEl = btn.closest(".mc-item");
+    const previousItems = MC.state.threeThings.items;
+    MC.state.threeThings = {
+      ...MC.state.threeThings,
+      items: previousItems.filter((it) => it.id !== id),
+    };
+    renderThreeThings();
+
+    // Persist dismissal server-side
+    let ok = false;
+    try {
+      const res = await fetch("/api/mission/three-things/dismiss", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      ok = res.ok;
+    } catch (err) {
+      console.error("[MC] dismiss request failed:", err);
+    }
+
+    if (!ok) {
+      // Roll back on failure
+      MC.state.threeThings = { ...MC.state.threeThings, items: previousItems };
+      renderThreeThings();
+      return;
+    }
+
+    showUndoToast(id);
+  }
+
+  // ============================================================================
+  // UNDO TOAST (dismissal affordance)
+  // ============================================================================
+
+  let toastContainer = null;
+  function getToastContainer() {
+    if (toastContainer && document.body.contains(toastContainer)) return toastContainer;
+    toastContainer = document.createElement("div");
+    toastContainer.className = "mc-toast-container";
+    document.body.appendChild(toastContainer);
+    return toastContainer;
+  }
+
+  function showUndoToast(id) {
+    const container = getToastContainer();
+    const toast = document.createElement("div");
+    toast.className = "mc-toast";
+    toast.innerHTML = `
+      <span class="mc-toast-msg">Dismissed</span>
+      <button type="button" class="mc-toast-action">Undo</button>
+    `;
+    const undoBtn = toast.querySelector(".mc-toast-action");
+
+    let removed = false;
+    const dismiss = () => {
+      if (removed) return;
+      removed = true;
+      toast.classList.add("mc-toast-leaving");
+      setTimeout(() => toast.remove(), 200);
+      if (timer) clearTimeout(timer);
+    };
+
+    const onUndo = async () => {
+      dismiss();
+      try {
+        await fetch("/api/mission/three-things/undismiss", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        });
+      } catch (err) {
+        console.error("[MC] undismiss request failed:", err);
+      }
+      // Refresh Three Things so the restored item reappears
+      await refreshThreeThings();
+      renderAll();
+    };
+
+    undoBtn.addEventListener("click", onUndo);
+    container.appendChild(toast);
+
+    const timer = setTimeout(dismiss, 5000);
   }
 
   // ---- Panel 2: Brain Dump ----
@@ -199,6 +284,15 @@
     cols.querySelectorAll(".mc-column-body").forEach((body) => {
       body.innerHTML = "";
     });
+
+    // Sync filter pill UI with state
+    const filter = MC.state.brainDump.filter || "all";
+    const filterBar = document.getElementById("mc-braindump-filter");
+    if (filterBar) {
+      filterBar.querySelectorAll(".mc-pill").forEach((pill) => {
+        pill.classList.toggle("mc-pill-active", pill.dataset.priority === filter);
+      });
+    }
 
     // Group by derived status
     const grouped = {
@@ -215,9 +309,15 @@
       grouped[st].push(t);
     }
 
+    // When a filter is active, hide columns that aren't in the filter set
+    // (so the user only sees the priorities they asked for).
+    const visibleCols = filterToVisibleColumns(filter);
+
     for (const [colName, list] of Object.entries(grouped)) {
       const body = cols.querySelector(`.mc-column-body[data-drop="${colName}"]`);
+      const col = cols.querySelector(`.mc-column[data-status="${colName}"]`);
       const countEl = cols.querySelector(`[data-count-for="${colName}"]`);
+      if (col) col.style.display = visibleCols.has(colName) ? "" : "none";
       if (countEl) countEl.textContent = list.length;
       if (!body) continue;
 
@@ -234,6 +334,35 @@
 
     // Wire drag/drop
     wireDragAndDrop();
+  }
+
+  /**
+   * Given the active filter, return which kanban columns should be visible.
+   * "all"  → every column
+   * specific priority keys → just that column (+ unsorted inbox for safety)
+   */
+  function filterToVisibleColumns(filter) {
+    if (!filter || filter === "all") {
+      return new Set([
+        "unsorted",
+        "urgent-important",
+        "schedule",
+        "delegate",
+        "icebox",
+      ]);
+    }
+    // For named filters, show the matching column. Include "unsorted" so the
+    // user still sees where new captures land.
+    const map = {
+      "urgent-important": ["urgent-important", "unsorted"],
+      schedule: ["schedule", "unsorted"],
+      "important-not-urgent": ["schedule", "unsorted"],
+      delegate: ["delegate", "unsorted"],
+      "urgent-not-important": ["delegate", "unsorted"],
+      icebox: ["icebox", "unsorted"],
+      unsorted: ["unsorted"],
+    };
+    return new Set(map[filter] || ["unsorted"]);
   }
 
   /**
@@ -259,6 +388,7 @@
     const priorityBadge = t.priority
       ? `<span class="mc-badge mc-badge-priority">${escapeHtml(t.priority)}</span>`
       : "";
+    const modeBadge = modeBadgeHtml(t.mode);
     const dueStr = t.due
       ? `<span class="mc-card-due">📅 ${escapeHtml(t.due)}</span>`
       : "";
@@ -266,6 +396,7 @@
       <div class="mc-card" draggable="true" data-task-id="${escapeAttr(t.id)}">
         <div class="mc-card-title">${escapeHtml(t.title)}</div>
         <div class="mc-card-meta">
+          ${modeBadge}
           ${assigneeBadge}
           ${priorityBadge}
           ${dueStr}
@@ -276,6 +407,23 @@
         </div>
       </div>
     `;
+  }
+
+  /**
+   * Build the mode badge for a task. Returns HTML.
+   * Modes: planning 🤝, autonomous 🤖, mixed 🔀, legacy (null) ⚠️.
+   */
+  function modeBadgeHtml(mode) {
+    if (mode === "planning") {
+      return '<span class="mc-badge mc-mode-planning" title="Planning — Mike drives">🤝</span>';
+    }
+    if (mode === "autonomous") {
+      return '<span class="mc-badge mc-mode-autonomous" title="Autonomous — Corvus owns">🤖</span>';
+    }
+    if (mode === "mixed") {
+      return '<span class="mc-badge mc-mode-mixed" title="Mixed — co-iterating">🔀</span>';
+    }
+    return '<span class="mc-badge mc-mode-legacy" title="Legacy — needs triage">⚠️</span>';
   }
 
   function wireDragAndDrop() {
@@ -550,6 +698,19 @@
     // Wire form (after partial inject)
     const form = document.getElementById("mc-braindump-form");
     if (form) form.addEventListener("submit", onBrainDumpSubmit);
+
+    // Wire priority filter pills
+    const filterBar = document.getElementById("mc-braindump-filter");
+    if (filterBar) {
+      filterBar.addEventListener("click", (e) => {
+        const pill = e.target.closest(".mc-pill");
+        if (!pill) return;
+        const next = pill.dataset.priority || "all";
+        if (next === MC.state.brainDump.filter) return;
+        MC.state.brainDump.filter = next;
+        refreshBrainDump().then(() => renderBrainDump());
+      });
+    }
 
     // Cmd/Ctrl+Enter shortcut
     const input = document.getElementById("mc-braindump-input");

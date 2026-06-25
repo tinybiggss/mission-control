@@ -144,6 +144,12 @@
         <!-- Mission Control: Three custom panels (Phase 1) -->
         <div id="mission-control-container"></div>
 
+        <!-- Mission Control: Today view (Phase 4) -->
+        <div id="mc-today-container"></div>
+
+        <!-- Mission Control: Outstanding view (Phase 4) -->
+        <div id="mc-outstanding-container"></div>
+
         <!-- Mission Control: Agent Observability (Phase 3) -->
         <div id="agents-panel-container"></div>
 
@@ -1679,7 +1685,23 @@
     </div>
 
     <script src="js/mission-control.js"></script>
+    <script src="js/today.js"></script>
+    <script src="js/outstanding.js"></script>
     <script src="js/agents.js"></script>
+
+    <script>
+      // Auto-init Today + Outstanding if their containers are present.
+      // The mission-control-container hosts the kanban; Today/Outstanding get
+      // their own slots (mc-today-container, mc-outstanding-container).
+      document.addEventListener("DOMContentLoaded", () => {
+        if (typeof window.MC_TodayInit === "function") {
+          window.MC_TodayInit("mc-today-container");
+        }
+        if (typeof window.MC_OutstandingInit === "function") {
+          window.MC_OutstandingInit("mc-outstanding-container");
+        }
+      });
+    </script>
 
     <script>
       // State

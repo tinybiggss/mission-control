@@ -1,0 +1,28 @@
+<!-- Mission Control Phase 4: Today view (Mike's inbox) -->
+<div class="mc-today" id="mc-today-root">
+  <div class="mc-today-header">
+    <div class="mc-today-title">
+      <span class="mc-today-emoji">📅</span>
+      <span class="mc-today-label">Today</span>
+      <span class="mc-today-date" id="mc-today-date">—</span>
+    </div>
+    <div class="mc-today-stats" id="mc-today-stats">
+      <span class="mc-stat" data-stat="planning">🤝 —</span>
+      <span class="mc-stat" data-stat="mixed">🔀 —</span>
+      <span class="mc-stat" data-stat="legacy">⚠️ —</span>
+      <span class="mc-stat mc-stat-total" data-stat="total">— total</span>
+    </div>
+  </div>
+
+  <div class="mc-today-filters" id="mc-today-filters" role="toolbar" aria-label="Today priority filter">
+    <button type="button" class="mc-pill mc-pill-active" data-priority="all">All</button>
+    <button type="button" class="mc-pill" data-priority="🔺">🔺 Urgent</button>
+    <button type="button" class="mc-pill" data-priority="⏫">⏫ Schedule</button>
+    <button type="button" class="mc-pill" data-priority="🔼">🔼 Delegate</button>
+    <button type="button" class="mc-pill" data-priority="🧊">🧊 Icebox</button>
+  </div>
+
+  <div class="mc-today-list" id="mc-today-list">
+    <div class="mc-empty">Loading…</div>
+  </div>
+</div>

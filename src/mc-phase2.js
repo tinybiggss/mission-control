@@ -610,6 +610,14 @@ function createPhase2API(deps) {
             cards: filtered,
             count: filtered.length,
             linkedCount: filtered.filter((c) => c.obsidianRef).length,
+            modeBreakdown: filtered.reduce(
+              (acc, c) => {
+                const m = c.mode == null ? "legacy" : c.mode;
+                acc[m] = (acc[m] || 0) + 1;
+                return acc;
+              },
+              { planning: 0, autonomous: 0, mixed: 0, legacy: 0 }
+            ),
           },
           null,
           2

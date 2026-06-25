@@ -686,6 +686,22 @@ const server = http.createServer((req, res) => {
     missionControl.feedDismiss(req, res, id);
   } else if (pathname === "/api/mission/cron-failures" && req.method === "GET") {
     missionControl.cronFailures(req, res);
+  } else if (pathname === "/api/mission/today" && req.method === "GET") {
+    missionControl.today(req, res);
+  } else if (pathname === "/api/mission/tasks" && req.method === "GET") {
+    missionControl.tasksList(req, res);
+  } else if (pathname === "/api/mission/outstanding" && req.method === "GET") {
+    missionControl.outstanding(req, res);
+  } else if (pathname === "/api/mission/projects" && req.method === "GET") {
+    missionControl.projectsList(req, res);
+  } else if (
+    /^\/api\/mission\/tasks\/[^/]+\/promote-to-project$/.test(pathname) &&
+    req.method === "POST"
+  ) {
+    const id = decodeURIComponent(
+      pathname.replace("/api/mission/tasks/", "").replace(/\/promote-to-project$/, "")
+    );
+    missionControl.promoteToProject(req, res, id);
   }
   // ---- Phase 3: Agent Observability ----
   else if (pathname === "/api/mission/agents" && req.method === "GET") {
