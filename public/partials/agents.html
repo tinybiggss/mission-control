@@ -1,0 +1,31 @@
+<!-- Mission Control Phase 3: Agent Observability -->
+<div class="mc-agents-section">
+  <div class="mc-agents-header">
+    <div class="mc-agents-title">
+      <span class="mc-agents-icon">🤖</span>
+      <span>Running Agents</span>
+      <span class="mc-agents-count" id="mc-agents-count">0</span>
+    </div>
+    <div class="mc-agents-meta" id="mc-agents-meta">—</div>
+  </div>
+
+  <div class="mc-agents-list" id="mc-agents-list">
+    <div class="mc-empty mc-empty-sm">No agents running.</div>
+  </div>
+
+  <div class="mc-agents-history-toggle" id="mc-agents-history-toggle">
+    <button type="button" class="mc-pill" id="mc-agents-show-history">
+      📜 Show recent history
+    </button>
+  </div>
+
+  <div class="mc-agents-history" id="mc-agents-history" hidden>
+    <div class="mc-agents-history-header">
+      <span>Last 7 days</span>
+      <button type="button" class="mc-btn-icon" id="mc-agents-history-refresh" title="Refresh history">↻</button>
+    </div>
+    <div class="mc-agents-history-list" id="mc-agents-history-list">
+      <div class="mc-empty mc-empty-sm">Loading history…</div>
+    </div>
+  </div>
+</div>

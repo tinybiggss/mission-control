@@ -91,6 +91,8 @@ const {
   getRecentCronFailures,
 } = require("./mission-control");
 const { createPhase2API } = require("./mc-phase2");
+const { createAgentsAPI } = require("./agents");
+const { getOllamaUsageCached, refreshOllamaUsageAsync } = require("./ollama-usage");
 
 // ============================================================================
 // CONFIGURATION
@@ -168,6 +170,11 @@ const missionControl = createMissionControlAPI({
 
 // Mission Control Phase 2: Obsidian Tasks integration
 const phase2 = createPhase2API({
+  getOpenClawDir,
+});
+
+// Mission Control Phase 3: Agent Observability
+const agents = createAgentsAPI({
   getOpenClawDir,
 });
 
@@ -582,6 +589,10 @@ const server = http.createServer((req, res) => {
     const usage = getLlmUsage(PATHS.state);
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify(usage, null, 2));
+  } else if (pathname === "/api/ollama-usage") {
+    const ollamaUsage = getOllamaUsageCached();
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(ollamaUsage || { error: "No data yet" }, null, 2));
   } else if (pathname === "/api/routing-stats") {
     const hours = parseInt(query.get("hours") || "24", 10);
     const stats = getRoutingStats(PATHS.skills, PATHS.state, hours);
@@ -632,6 +643,21 @@ const server = http.createServer((req, res) => {
     return;
   } else if (pathname === "/api/mission/three-things" && req.method === "GET") {
     missionControl.threeThings(req, res);
+  } else if (
+    pathname === "/api/mission/three-things/dismiss" &&
+    req.method === "POST"
+  ) {
+    missionControl.threeThingsDismiss(req, res);
+  } else if (
+    pathname === "/api/mission/three-things/undismiss" &&
+    req.method === "POST"
+  ) {
+    missionControl.threeThingsUndismiss(req, res);
+  } else if (
+    pathname === "/api/mission/three-things/dismissed" &&
+    req.method === "GET"
+  ) {
+    missionControl.threeThingsDismissedList(req, res);
   } else if (pathname === "/api/mission/braindump" && req.method === "GET") {
     missionControl.brainDumpList(req, res);
   } else if (pathname === "/api/mission/braindump" && req.method === "POST") {
@@ -660,6 +686,25 @@ const server = http.createServer((req, res) => {
     missionControl.feedDismiss(req, res, id);
   } else if (pathname === "/api/mission/cron-failures" && req.method === "GET") {
     missionControl.cronFailures(req, res);
+  }
+  // ---- Phase 3: Agent Observability ----
+  else if (pathname === "/api/mission/agents" && req.method === "GET") {
+    agents.list(req, res);
+  } else if (
+    pathname === "/api/mission/agents/history" &&
+    req.method === "GET"
+  ) {
+    agents.history(req, res);
+  } else if (
+    pathname.startsWith("/api/mission/agents/") &&
+    req.method === "GET"
+  ) {
+    const name = decodeURIComponent(pathname.replace("/api/mission/agents/", ""));
+    // Guard against the static-ish routes above being re-matched
+    if (name && name !== "history") {
+      agents.detail(req, res, name);
+      return;
+    }
   }
   // ---- Phase 2: Obsidian Tasks Integration ----
   else if (pathname === "/api/mc/promote" && req.method === "POST") {
