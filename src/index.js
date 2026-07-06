@@ -61,7 +61,7 @@ if (cliPort) {
 const { getVersion } = require("./utils");
 const { CONFIG, getOpenClawDir } = require("./config");
 const { handleJobsRequest, isJobsRoute } = require("./jobs");
-const { runOpenClaw, runOpenClawAsync, extractJSON } = require("./openclaw");
+const { runOpenClaw, runOpenClawAsync, extractJSON, setCliEnabled } = require("./openclaw");
 const { getSystemVitals, checkOptionalDeps, getOptionalDeps } = require("./vitals");
 const { checkAuth, getUnauthorizedPage } = require("./auth");
 const { loadPrivacySettings, savePrivacySettings } = require("./privacy");
@@ -90,9 +90,14 @@ const {
   createMissionControlAPI,
   getRecentCronFailures,
 } = require("./mission-control");
-const { createPhase2API } = require("./mc-phase2");
+const { createPhase2API, readDailyTasks } = require("./mc-phase2");
 const { createAgentsAPI } = require("./agents");
 const { getOllamaUsageCached, refreshOllamaUsageAsync } = require("./ollama-usage");
+const { createHealthAPI } = require("./health");
+const { createSystemMindAPI, getSystemMindCached } = require("./system-mind");
+const { createProjectsAPI } = require("./projects");
+const { createSignalsAPI } = require("./signals");
+const { createContentAPI } = require("./corvus-proxy");
 
 // ============================================================================
 // CONFIGURATION
@@ -164,8 +169,22 @@ const state = createStateModule({
 });
 
 // Mission Control Phase 1: Three Things widget, Brain Dump, Activity Feed
+// Phase B enriches Today with Obsidian daily-note tasks + a ledger "brief".
 const missionControl = createMissionControlAPI({
   getOpenClawDir,
+  getDailyTasks: (dateStr) => readDailyTasks(dateStr),
+  getBrief: () => {
+    const mind = getSystemMindCached();
+    const latest = mind && mind.sessions && mind.sessions[0];
+    if (!latest) return null;
+    return {
+      date: latest.date,
+      project: latest.project,
+      environment: latest.environment,
+      summary: latest.summary,
+      openThreads: latest.openThreads || [],
+    };
+  },
 });
 
 // Mission Control Phase 2: Obsidian Tasks integration
@@ -177,6 +196,27 @@ const phase2 = createPhase2API({
 const agents = createAgentsAPI({
   getOpenClawDir,
 });
+
+// Mission Control Phase A: Health / Ops self-monitoring
+const health = createHealthAPI({
+  getOpenClawDir,
+});
+
+// Mission Control Phase B: The System Mind (memory ledger feed)
+const systemMind = createSystemMindAPI({});
+
+// Mission Control Phase C: Projects, Signals, Content pipeline
+const projects = createProjectsAPI({});
+const signals = createSignalsAPI({});
+const content = createContentAPI({});
+
+// Gate the openclaw CLI: on this box the OAuth token is expired, so shelling out
+// just fails. Default OFF (config) kills the 11K-failure poll loop; the circuit
+// breaker also protects us if a stray call slips through.
+setCliEnabled(CONFIG.integrations.openclawCli.enabled);
+console.log(
+  `[Config] openclaw CLI polls: ${CONFIG.integrations.openclawCli.enabled ? "enabled" : "disabled (token expired — using ollama-usage)"}`,
+);
 
 // ============================================================================
 // STARTUP: Data migration + background tasks
@@ -712,6 +752,11 @@ const server = http.createServer((req, res) => {
   ) {
     agents.history(req, res);
   } else if (
+    pathname === "/api/mission/agents/schedule" &&
+    req.method === "GET"
+  ) {
+    agents.scheduleBoard(req, res);
+  } else if (
     pathname.startsWith("/api/mission/agents/") &&
     req.method === "GET"
   ) {
@@ -742,6 +787,25 @@ const server = http.createServer((req, res) => {
     phase2.cleanup(req, res);
   } else if (pathname === "/api/mc/velocity" && req.method === "GET") {
     phase2.velocity(req, res);
+  }
+  // ---- Phase A: Health / Ops self-monitoring ----
+  else if (pathname === "/api/mission/health" && req.method === "GET") {
+    health.list(req, res);
+  }
+  // ---- Phase B: The System Mind (memory ledger) ----
+  else if (pathname === "/api/mission/system-mind" && req.method === "GET") {
+    systemMind.list(req, res);
+  }
+  // ---- Phase C: Projects, Signals, Content ----
+  else if (pathname === "/api/mission/dev-projects" && req.method === "GET") {
+    projects.list(req, res);
+  } else if (pathname === "/api/mission/signals" && req.method === "GET") {
+    signals.list(req, res);
+  } else if (pathname.startsWith("/api/mission/signals/") && req.method === "DELETE") {
+    const id = decodeURIComponent(pathname.replace("/api/mission/signals/", ""));
+    signals.dismiss(req, res, id);
+  } else if (pathname === "/api/mission/content" && req.method === "GET") {
+    content.list(req, res);
   } else if (isJobsRoute(pathname)) {
     handleJobsRequest(req, res, pathname, query, req.method);
   } else {

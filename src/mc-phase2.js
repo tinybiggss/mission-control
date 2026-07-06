@@ -134,6 +134,36 @@ function getTodayDate() {
 }
 
 /**
+ * Read unchecked tasks from a daily note WITHOUT creating it (read-only, safe
+ * on GET). Returns [{ text, raw, ref }] for each `- [ ] …` line. `ref` is the
+ * ^task-xxxxxx block id if present (lets the UI deep-link into Obsidian).
+ * Caps at `limit` to keep the Today panel scannable.
+ */
+function readDailyTasks(dateStr, limit = 15) {
+  const filePath = path.join(DAILY_PLANS_DIR, `${dateStr}.md`);
+  if (!fs.existsSync(filePath)) return [];
+  let content = "";
+  try {
+    content = fs.readFileSync(filePath, "utf8");
+  } catch {
+    return [];
+  }
+  const tasks = [];
+  for (const line of content.split("\n")) {
+    const m = line.match(/^\s*-\s*\[ \]\s+(.*)$/); // unchecked only
+    if (!m) continue;
+    const raw = m[1].trim();
+    const refMatch = raw.match(/\^(task-[a-z0-9]+)\s*$/i);
+    const ref = refMatch ? refMatch[1] : null;
+    // Strip the trailing block id for display; keep tags/emoji (they carry meaning).
+    const text = raw.replace(/\s*\^task-[a-z0-9]+\s*$/i, "").trim();
+    if (text) tasks.push({ text, raw, ref });
+    if (tasks.length >= limit) break;
+  }
+  return tasks;
+}
+
+/**
  * Ensure the daily note file exists; create with frontmatter if needed.
  */
 function ensureDailyNote(dateStr) {
@@ -801,6 +831,7 @@ module.exports = {
   generateBlockId,
   getTodayDate,
   ensureDailyNote,
+  readDailyTasks,
   autoArchiveStale,
   checkVelocityCap,
   invokeRollover,

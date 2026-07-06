@@ -1088,11 +1088,34 @@ function createMissionControlAPI(deps) {
         { planningCount: 0, autonomousCount: 0, mixedCount: 0, legacyCount: 0 }
       );
 
+      const STALLED_DAYS = 7;
+      let stalledCount = 0;
       shaped = sortForToday(shaped).map((t) => {
         // Tag overdue tasks so the UI can color them red
         if (t.due && t.due < today) t.overdue = true;
+        // Tag stalled tasks (old + still un-triaged) so the UI can surface them
+        if ((t.ageDays || 0) >= STALLED_DAYS) {
+          t.stalled = true;
+          stalledCount++;
+        }
         return t;
       });
+
+      // Enrichments (injected, optional — degrade gracefully if absent):
+      //  - obsidianTasks: unchecked tasks from today's Obsidian daily note
+      //  - brief: a one-line "what you last did" re-orientation from the ledger
+      let obsidianTasks = [];
+      try {
+        obsidianTasks = deps.getDailyTasks ? deps.getDailyTasks(today) : [];
+      } catch (e) {
+        console.error("[mission-control] getDailyTasks failed:", e.message);
+      }
+      let brief = null;
+      try {
+        brief = deps.getBrief ? deps.getBrief() : null;
+      } catch (e) {
+        console.error("[mission-control] getBrief failed:", e.message);
+      }
 
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
@@ -1101,6 +1124,9 @@ function createMissionControlAPI(deps) {
             tasks: shaped,
             count: shaped.length,
             ...counts,
+            stalledCount,
+            obsidianTasks,
+            brief,
             asOf: new Date().toISOString(),
             today,
           },

@@ -2977,3 +2977,571 @@ main {
   flex-shrink: 0;
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
 }
+
+/* ============================================================================
+   Mission Control Phase A — Health / Ops self-monitor
+   ============================================================================ */
+.mc-health {
+  --amber: #d29922;
+}
+.mc-health-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.mc-health-title {
+  font-size: 15px;
+  margin: 0;
+  font-weight: 600;
+}
+.mc-health-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex-shrink: 0;
+}
+.mc-health-dot-ok {
+  background: var(--green);
+  box-shadow: 0 0 8px rgba(63, 185, 80, 0.6);
+}
+.mc-health-dot-warn {
+  background: var(--amber, #d29922);
+  box-shadow: 0 0 8px rgba(210, 153, 34, 0.6);
+}
+.mc-health-dot-error {
+  background: var(--red);
+  box-shadow: 0 0 8px rgba(248, 81, 73, 0.6);
+}
+.mc-health-summary {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.mc-health-asof {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+.mc-health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+}
+.mc-health-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.mc-health-ok {
+  border-left-color: var(--green);
+}
+.mc-health-warn {
+  border-left-color: var(--amber, #d29922);
+}
+.mc-health-error {
+  border-left-color: var(--red);
+}
+.mc-health-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.mc-health-icon {
+  font-size: 11px;
+}
+.mc-health-label {
+  font-weight: 600;
+  font-size: 13px;
+}
+.mc-health-value {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+.mc-health-detail {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* ============================================================================
+   Mission Control Phase B — The System Mind
+   ============================================================================ */
+.mc-mind-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.mc-mind-title {
+  font-size: 15px;
+  margin: 0;
+  font-weight: 600;
+}
+.mc-mind-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.mc-mind-asof {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+.mc-mind-down {
+  padding: 16px;
+  color: var(--text-muted);
+  background: var(--card-bg);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+/* Consolidation */
+.mc-mind-consolidation {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.mc-mind-con-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.mc-mind-con-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+.mc-mind-con-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+.mc-mind-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px 18px;
+}
+.mc-mind-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+.mc-mind-field-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.mc-mind-field-list li {
+  margin-bottom: 2px;
+}
+/* Recent sessions */
+.mc-mind-section-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin: 4px 0 8px;
+}
+.mc-mind-session {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.mc-mind-session:last-child {
+  border-bottom: none;
+}
+.mc-mind-session-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+.mc-mind-session-env {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.mc-mind-session-date {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+.mc-mind-session-summary {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.mc-mind-session-detail {
+  margin: 4px 0 0;
+  padding-left: 4px;
+  list-style: none;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.mc-mind-decision {
+  color: var(--text-muted);
+}
+.mc-mind-thread {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ============================================================================
+   Mission Control Phase B — Today enrichment (brief, Obsidian, stalled)
+   ============================================================================ */
+.mc-today-brief {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--text-muted);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}
+.mc-today-brief-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+.mc-today-brief-date {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+.mc-today-brief-summary {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.mc-today-brief-threads {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.mc-today-obsidian {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+.mc-today-obsidian-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.mc-today-obsidian-count {
+  color: var(--accent);
+  font-weight: 600;
+}
+.mc-today-obsidian-row {
+  font-size: 13px;
+  color: var(--text);
+  padding: 3px 0;
+  line-height: 1.4;
+}
+.mc-obsidian-check {
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+.mc-row-stalled {
+  opacity: 0.92;
+}
+.mc-stalled-tag {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+/* ============================================================================
+   Mission Control Phase C — Projects / Signals / Content
+   ============================================================================ */
+/* Shared section headers */
+.mc-projects-header, .mc-signals-header, .mc-content-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.mc-projects-title, .mc-signals-title, .mc-content-title {
+  font-size: 15px;
+  margin: 0;
+  font-weight: 600;
+}
+.mc-projects-sub, .mc-signals-sub, .mc-content-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.mc-projects-asof, .mc-signals-asof, .mc-content-asof {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+/* Projects grid */
+.mc-projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 10px;
+}
+.mc-proj-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.mc-proj-fresh {
+  border-left: 3px solid var(--green);
+}
+.mc-proj-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.mc-proj-name {
+  font-weight: 600;
+  font-size: 13px;
+}
+.mc-proj-age {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  white-space: nowrap;
+}
+.mc-proj-status {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.mc-proj-change {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.mc-proj-change-date {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  opacity: 0.8;
+}
+.mc-proj-tasks {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.mc-proj-tasks-count {
+  color: var(--accent);
+  font-weight: 600;
+}
+.mc-proj-open {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--accent);
+  text-decoration: none;
+}
+.mc-proj-open:hover {
+  text-decoration: underline;
+}
+/* Signals */
+.mc-signals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mc-signal-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.mc-signal-prio-high {
+  border-left-color: var(--red);
+}
+.mc-signal-prio-medium {
+  border-left-color: #d29922;
+}
+.mc-signal-prio-low {
+  border-left-color: var(--text-muted);
+}
+.mc-signal-icon {
+  font-size: 16px;
+}
+.mc-signal-body {
+  flex: 1;
+  min-width: 0;
+}
+.mc-signal-topic {
+  font-size: 13px;
+  color: var(--text);
+}
+.mc-signal-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  flex-wrap: wrap;
+}
+.mc-signal-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.mc-signal-badge-high { background: rgba(248,81,73,0.15); color: var(--red); }
+.mc-signal-badge-medium { background: rgba(210,153,34,0.15); color: #d29922; }
+.mc-signal-badge-low { background: rgba(139,148,158,0.15); color: var(--text-muted); }
+.mc-signal-pillar {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: rgba(88,166,255,0.08);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+.mc-signal-link {
+  font-size: 11px;
+  color: var(--accent);
+  text-decoration: none;
+}
+/* Content pipeline */
+.mc-content-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+.mc-content-col {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.mc-content-col-head {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.mc-content-col-count {
+  color: var(--accent);
+}
+.mc-content-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.mc-content-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mc-content-phase {
+  margin-left: auto;
+  font-size: 9px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 5px;
+  white-space: nowrap;
+}
+.mc-content-empty {
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 4px 0;
+}
+
+/* ============================================================================
+   Mission Control Phase D — Automation schedule board
+   ============================================================================ */
+.mc-schedule-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.mc-schedule-title {
+  font-size: 15px;
+  margin: 0;
+  font-weight: 600;
+}
+.mc-schedule-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.mc-schedule-asof {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+.mc-schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mc-sched-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.mc-sched-row:hover {
+  background: var(--card-bg);
+}
+.mc-sched-failing {
+  background: rgba(248, 81, 73, 0.06);
+}
+.mc-sched-dot {
+  font-size: 9px;
+}
+.mc-sched-name {
+  font-weight: 600;
+  min-width: 180px;
+  color: var(--text);
+}
+.mc-sched-when {
+  color: var(--text-muted);
+  min-width: 150px;
+}
+.mc-sched-next {
+  color: var(--accent);
+  min-width: 70px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+.mc-sched-last {
+  color: var(--text-muted);
+  margin-left: auto;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+.mc-sched-err {
+  color: var(--red);
+  font-weight: 600;
+  font-size: 11px;
+}
+.mc-sched-disabled {
+  opacity: 0.5;
+}

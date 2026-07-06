@@ -24,6 +24,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const { getCronJobs } = require("./cron");
 
 const HOME = process.env.HOME || "/Users/michaeljones";
 
@@ -272,7 +273,8 @@ function findAgent(identifier) {
  * @param {object} deps
  * @param {function} [deps.getOpenClawDir] - unused for now (future: gateway queries)
  */
-function createAgentsAPI(_deps = {}) {
+function createAgentsAPI(deps = {}) {
+  const getOpenClawDir = deps.getOpenClawDir;
   return {
     /**
      * GET /api/mission/agents
@@ -288,6 +290,46 @@ function createAgentsAPI(_deps = {}) {
             count: agents.length,
             asOf: new Date().toISOString(),
           },
+          null,
+          2,
+        ),
+      );
+    },
+
+    /**
+     * GET /api/mission/agents/schedule
+     * The scheduled-automation board: OpenClaw cron jobs with real last-run
+     * status, upcoming runs first. Surfaces failing/overdue jobs so silent
+     * cron breakage is visible (audit F9).
+     */
+    scheduleBoard(req, res) {
+      let jobs = [];
+      try {
+        jobs = getOpenClawDir ? getCronJobs(getOpenClawDir) : [];
+      } catch (e) {
+        console.error("[agents] scheduleBoard failed:", e.message);
+      }
+      const isFailing = (j) =>
+        (j.consecutiveErrors || 0) > 0 ||
+        j.lastStatus === "error" ||
+        j.lastStatus === "failed";
+      // Sort: overdue first, then soonest upcoming, disabled last.
+      const sorted = jobs.slice().sort((a, b) => {
+        if (a.enabled !== b.enabled) return a.enabled ? -1 : 1;
+        const an = a.nextRunAtMs || Infinity;
+        const bn = b.nextRunAtMs || Infinity;
+        return an - bn;
+      });
+      const summary = {
+        total: jobs.length,
+        enabled: jobs.filter((j) => j.enabled).length,
+        disabled: jobs.filter((j) => !j.enabled).length,
+        failing: jobs.filter(isFailing).length,
+      };
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify(
+          { jobs: sorted, summary, asOf: new Date().toISOString() },
           null,
           2,
         ),

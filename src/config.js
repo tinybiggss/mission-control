@@ -257,6 +257,17 @@ function loadConfig() {
         apiKey: process.env.LINEAR_API_KEY || fileConfig.integrations?.linear?.apiKey,
         teamId: process.env.LINEAR_TEAM_ID || fileConfig.integrations?.linear?.teamId,
       },
+      // The `openclaw` CLI is only reachable when its OAuth token is valid.
+      // On Mike's box the token is expired, so shelling out just burns CPU and
+      // spams server.err. Default OFF; ollama-usage.js supplies the usage numbers.
+      // Flip to true (or set OPENCLAW_CLI_ENABLED=true) once `claude setup-token`
+      // / `openclaw onboard` has restored auth.
+      openclawCli: {
+        enabled:
+          process.env.OPENCLAW_CLI_ENABLED != null
+            ? process.env.OPENCLAW_CLI_ENABLED === "true"
+            : fileConfig.integrations?.openclawCli?.enabled ?? false,
+      },
     },
 
     // Billing - for cost savings calculation

@@ -141,17 +141,35 @@
 
       <!-- Legend & Filters -->
       <main>
+        <!-- Mission Control: Health / Ops self-monitor (Phase A) -->
+        <div id="mc-health-container"></div>
+
         <!-- Mission Control: Three custom panels (Phase 1) -->
         <div id="mission-control-container"></div>
 
         <!-- Mission Control: Today view (Phase 4) -->
         <div id="mc-today-container"></div>
 
+        <!-- Mission Control: The System Mind (Phase B) -->
+        <div id="mc-system-mind-container"></div>
+
+        <!-- Mission Control: Signals / Research (Phase C) -->
+        <div id="mc-signals-container"></div>
+
+        <!-- Mission Control: Projects (Phase C) -->
+        <div id="mc-projects-container"></div>
+
+        <!-- Mission Control: Content pipeline (Phase C) -->
+        <div id="mc-content-container"></div>
+
         <!-- Mission Control: Outstanding view (Phase 4) -->
         <div id="mc-outstanding-container"></div>
 
         <!-- Mission Control: Agent Observability (Phase 3) -->
         <div id="agents-panel-container"></div>
+
+        <!-- Mission Control: Automation schedule board (Phase D) -->
+        <div id="mc-schedule-container"></div>
 
         <!-- System Vitals Section -->
         <div class="section" id="vitals-section">
@@ -1688,14 +1706,38 @@
     <script src="js/today.js"></script>
     <script src="js/outstanding.js"></script>
     <script src="js/agents.js"></script>
+    <script src="js/health.js"></script>
+    <script src="js/system-mind.js"></script>
+    <script src="js/signals.js"></script>
+    <script src="js/projects.js"></script>
+    <script src="js/content.js"></script>
+    <script src="js/schedule.js"></script>
 
     <script>
       // Auto-init Today + Outstanding if their containers are present.
       // The mission-control-container hosts the kanban; Today/Outstanding get
       // their own slots (mc-today-container, mc-outstanding-container).
       document.addEventListener("DOMContentLoaded", () => {
+        if (typeof window.MC_HealthInit === "function") {
+          window.MC_HealthInit("mc-health-container");
+        }
         if (typeof window.MC_TodayInit === "function") {
           window.MC_TodayInit("mc-today-container");
+        }
+        if (typeof window.MC_SystemMindInit === "function") {
+          window.MC_SystemMindInit("mc-system-mind-container");
+        }
+        if (typeof window.MC_SignalsInit === "function") {
+          window.MC_SignalsInit("mc-signals-container");
+        }
+        if (typeof window.MC_ProjectsInit === "function") {
+          window.MC_ProjectsInit("mc-projects-container");
+        }
+        if (typeof window.MC_ContentInit === "function") {
+          window.MC_ContentInit("mc-content-container");
+        }
+        if (typeof window.MC_ScheduleInit === "function") {
+          window.MC_ScheduleInit("mc-schedule-container");
         }
         if (typeof window.MC_OutstandingInit === "function") {
           window.MC_OutstandingInit("mc-outstanding-container");

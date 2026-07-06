@@ -98,13 +98,32 @@ function cronToHuman(expr) {
   return expr; // Return original as fallback
 }
 
-// Get cron jobs - reads directly from file for speed (CLI takes 11s+)
+// Read live state from jobs-state.json (source of truth for run status)
+function readCronState(getOpenClawDir) {
+  try {
+    const statePath = path.join(getOpenClawDir(), "cron", "jobs-state.json");
+    if (fs.existsSync(statePath)) {
+      const data = JSON.parse(fs.readFileSync(statePath, "utf8"));
+      return data.jobs || {};
+    }
+  } catch (e) {
+    console.error("Failed to read cron state:", e.message);
+  }
+  return {};
+}
+
+// Get cron jobs - reads from jobs.json and merges live state from jobs-state.json
 function getCronJobs(getOpenClawDir) {
   try {
     const cronPath = path.join(getOpenClawDir(), "cron", "jobs.json");
     if (fs.existsSync(cronPath)) {
       const data = JSON.parse(fs.readFileSync(cronPath, "utf8"));
+      const liveState = readCronState(getOpenClawDir);
+
       return (data.jobs || []).map((j) => {
+        // Merge live state from jobs-state.json
+        const state = liveState[j.id]?.state || j.state || {};
+
         // Parse schedule
         let scheduleStr = "—";
         let scheduleHuman = null;
@@ -115,13 +134,18 @@ function getCronJobs(getOpenClawDir) {
           } else if (j.schedule.kind === "once") {
             scheduleStr = "once";
             scheduleHuman = "One-time";
+          } else if (j.schedule.kind === "every" && j.schedule.everyMs) {
+            const mins = Math.round(j.schedule.everyMs / 60000);
+            scheduleHuman = `Every ${mins} minutes`;
+            scheduleStr = `*/${mins} * * * *`;
           }
         }
 
         // Format next run
         let nextRunStr = "—";
-        if (j.state?.nextRunAtMs) {
-          const next = new Date(j.state.nextRunAtMs);
+        const nextRunMs = state.nextRunAtMs;
+        if (nextRunMs) {
+          const next = new Date(nextRunMs);
           const now = new Date();
           const diffMs = next - now;
           const diffMins = Math.round(diffMs / 60000);
@@ -136,14 +160,38 @@ function getCronJobs(getOpenClawDir) {
           }
         }
 
+        // Format last run time
+        let lastRunStr = null;
+        if (state.lastRunAtMs) {
+          const last = new Date(state.lastRunAtMs);
+          const now = new Date();
+          const diffMs = now - last;
+          const diffMins = Math.round(diffMs / 60000);
+          if (diffMins < 60) {
+            lastRunStr = `${diffMins}m ago`;
+          } else if (diffMins < 1440) {
+            lastRunStr = `${Math.round(diffMins / 60)}h ago`;
+          } else {
+            lastRunStr = `${Math.round(diffMins / 1440)}d ago`;
+          }
+        }
+
         return {
           id: j.id,
           name: j.name || j.id.slice(0, 8),
+          description: j.description || "",
           schedule: scheduleStr,
           scheduleHuman: scheduleHuman,
           nextRun: nextRunStr,
+          nextRunAtMs: state.nextRunAtMs || null,
           enabled: j.enabled !== false,
-          lastStatus: j.state?.lastStatus,
+          lastStatus: state.lastStatus || state.lastRunStatus || null,
+          lastError: state.lastError || null,
+          lastRunAtMs: state.lastRunAtMs || null,
+          lastRunStr: lastRunStr,
+          lastDurationMs: state.lastDurationMs || null,
+          consecutiveErrors: state.consecutiveErrors || 0,
+          lastDelivered: state.lastDelivered !== false,
         };
       });
     }
@@ -156,4 +204,5 @@ function getCronJobs(getOpenClawDir) {
 module.exports = {
   cronToHuman,
   getCronJobs,
+  readCronState,
 };

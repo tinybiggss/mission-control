@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { execFile } = require("child_process");
-const { getSafeEnv } = require("./openclaw");
+const { getSafeEnv, isCliAvailable, recordCliSuccess, recordCliFailure } = require("./openclaw");
 
 // Cache for LLM usage data (openclaw CLI is slow ~4-5s)
 let llmUsageCache = { data: null, timestamp: 0, refreshing: false };
@@ -10,6 +10,9 @@ const LLM_CACHE_TTL_MS = 60000; // 60 seconds
 // Background async refresh of LLM usage data
 function refreshLlmUsageAsync() {
   if (llmUsageCache.refreshing) return; // Already refreshing
+  // Share the openclaw CLI availability gate/breaker: when the token is expired
+  // and the circuit is open, don't spawn — this is what killed the old spam loop.
+  if (!isCliAvailable()) return;
   llmUsageCache.refreshing = true;
 
   const profile = process.env.OPENCLAW_PROFILE || "";
@@ -23,9 +26,10 @@ function refreshLlmUsageAsync() {
     (err, stdout) => {
       llmUsageCache.refreshing = false;
       if (err) {
-        console.error("[LLM Usage] Async refresh failed:", err.message);
+        recordCliFailure(); // logs once when the circuit opens; no per-call spam
         return;
       }
+      recordCliSuccess();
       try {
         // Extract JSON portion - openclaw may output doctor warnings before JSON
         const jsonStart = stdout.indexOf("{");
@@ -197,11 +201,11 @@ function getLlmUsage(statePath) {
     console.error("[LLM Usage] File fallback failed:", e.message);
   }
 
-  // No valid data - return auth error state (we know API returns 403)
+  // No valid data - return auth error state with Ollama fallback hint
   return {
     timestamp: new Date().toISOString(),
     source: "error",
-    error: "API key lacks user:profile OAuth scope",
+    error: "API key lacks user:profile OAuth scope — using /api/ollama-usage for Ollama stats",
     errorType: "auth",
     claude: {
       session: { usedPct: null, remainingPct: null, resetsIn: null, error: "Auth required" },
@@ -211,6 +215,7 @@ function getLlmUsage(statePath) {
     },
     codex: { sessionsToday: 0, tasksToday: 0, usage5hPct: 0, usageDayPct: 0 },
     routing: { total: 0, claudeTasks: 0, codexTasks: 0, claudePct: 0, codexPct: 0, codexFloor: 20 },
+    ollamaEndpoint: "/api/ollama-usage",
   };
 }
 

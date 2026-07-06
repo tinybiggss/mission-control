@@ -120,10 +120,40 @@ async function refreshOperatorsAsync(dataDir, getOpenClawDir) {
               break; // Found user for this session, move to next file
             }
 
-            // Also check for Telegram users: "[Telegram +Xm date] username:"
-            const telegramMatch = text.match(/\[Telegram[^\]]*\]\s*([\w.-]+):/);
-            if (telegramMatch) {
-              const username = telegramMatch[1];
+            // Check for Telegram users in OpenClaw runtime context entries
+            // Format: "chat_id": "telegram:8633920976", "sender": "Mike Jones", "sender_id": "8633920976"
+            const telegramChatMatch = text.match(/"chat_id":\s*"telegram:([^"]+)"/);
+            const telegramSenderMatch = text.match(/"sender":\s*"([^"]+)"/);
+            const telegramSenderIdMatch = text.match(/"sender_id":\s*"([^"]+)"/);
+
+            if (telegramChatMatch && telegramSenderMatch) {
+              const username = telegramSenderMatch[1];
+              const userId = telegramSenderIdMatch ? telegramSenderIdMatch[1] : telegramChatMatch[1];
+              const operatorId = `telegram:${userId}`;
+
+              if (!operatorsMap.has(operatorId)) {
+                operatorsMap.set(operatorId, {
+                  id: operatorId,
+                  telegramId: userId,
+                  name: username,
+                  username: username,
+                  source: "telegram",
+                  firstSeen: toMs(entry.timestamp, stat.mtimeMs),
+                  lastSeen: toMs(entry.timestamp, stat.mtimeMs),
+                  sessionCount: 1,
+                });
+              } else {
+                const op = operatorsMap.get(operatorId);
+                op.lastSeen = Math.max(op.lastSeen, toMs(entry.timestamp, stat.mtimeMs));
+                op.sessionCount++;
+              }
+              break;
+            }
+
+            // Also check for legacy Telegram format: "[Telegram +Xm date] username:"
+            const legacyTelegramMatch = text.match(/\[Telegram[^\]]*\]\s*([\w.-]+):/);
+            if (legacyTelegramMatch && !telegramChatMatch) {
+              const username = legacyTelegramMatch[1];
               const operatorId = `telegram:${username}`;
 
               if (!operatorsMap.has(operatorId)) {

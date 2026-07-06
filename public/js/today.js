@@ -19,6 +19,8 @@
       today: null,
       asOf: null,
       filterPriority: "all",
+      brief: null,
+      obsidianTasks: [],
     },
     pollInterval: null,
     POLL_MS: 8000,
@@ -68,14 +70,62 @@
     };
     Today.state.today = data.today;
     Today.state.asOf = data.asOf;
+    Today.state.brief = data.brief || null;
+    Today.state.obsidianTasks = data.obsidianTasks || [];
     render();
   }
 
   function render() {
     renderHeader();
     renderStats();
+    renderBrief();
     renderFilter();
     renderList();
+    renderObsidian();
+  }
+
+  function renderBrief() {
+    const el = document.getElementById("mc-today-brief");
+    if (!el) return;
+    const b = Today.state.brief;
+    if (!b || !b.summary) {
+      el.innerHTML = "";
+      el.style.display = "none";
+      return;
+    }
+    el.style.display = "";
+    const proj = b.project
+      ? `<span class="mc-badge mc-badge-project">${escapeHtml(b.project)}</span>`
+      : "";
+    const threads = (b.openThreads || [])
+      .map((t) => `<li>${escapeHtml(t)}</li>`)
+      .join("");
+    el.innerHTML = `
+      <div class="mc-today-brief-label">↩ Last session ${proj} <span class="mc-today-brief-date">${escapeHtml(b.date || "")}</span></div>
+      <div class="mc-today-brief-summary">${escapeHtml(b.summary)}</div>
+      ${threads ? `<ul class="mc-today-brief-threads">${threads}</ul>` : ""}
+    `;
+  }
+
+  function renderObsidian() {
+    const el = document.getElementById("mc-today-obsidian");
+    if (!el) return;
+    const tasks = Today.state.obsidianTasks || [];
+    if (!tasks.length) {
+      el.innerHTML = "";
+      el.style.display = "none";
+      return;
+    }
+    el.style.display = "";
+    el.innerHTML = `
+      <div class="mc-today-obsidian-label">📓 From today's Obsidian note <span class="mc-today-obsidian-count">${tasks.length}</span></div>
+      ${tasks
+        .map(
+          (t) =>
+            `<div class="mc-today-obsidian-row"><span class="mc-obsidian-check">☐</span> ${escapeHtml(t.text)}</div>`
+        )
+        .join("")}
+    `;
   }
 
   function renderHeader() {
@@ -171,9 +221,9 @@
       : '<span class="mc-row-due mc-row-due-none">—</span>';
     const prio = t.priority || "·";
     return `
-      <div class="mc-today-row ${t.overdue ? "mc-row-overdue" : ""}" data-task-id="${escapeAttr(t.id)}">
+      <div class="mc-today-row ${t.overdue ? "mc-row-overdue" : ""} ${t.stalled ? "mc-row-stalled" : ""}" data-task-id="${escapeAttr(t.id)}">
         <div class="mc-row-prio">${escapeHtml(prio)}</div>
-        <div class="mc-row-title">${escapeHtml(t.title)}</div>
+        <div class="mc-row-title">${escapeHtml(t.title)}${t.stalled ? ' <span class="mc-stalled-tag" title="Stalled — 7+ days untouched">🕸️</span>' : ""}</div>
         <div class="mc-row-meta">
           ${modeBadge}
           ${projectBadge}
