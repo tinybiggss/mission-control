@@ -16,7 +16,15 @@ This plan tracks the phased rollout of custom panels + integrations.
 | 1 | Three custom panels (Three Things, Brain Dump, Activity Feed) | ✅ Shipped | `feat/mission-control-phase2-integration` (initial) |
 | 2 | Obsidian Tasks integration (kanban + promote + rollover) | ✅ Shipped | `feat/mission-control-phase2-integration` |
 | 3 | Agent Observability (live sub-agent tracker) | ✅ Shipped | `feat/mc-agent-observability` |
-| 4 | TBD (planning vs autonomous split, calendar view) | 📋 Spec phase | — |
+| 4 | Today view + Planning vs Autonomous mode field | ✅ Shipped | `feat/mc-today-view` |
+| A | "Daily operating picture" rebuild — Health/Ops panel + gate the failing openclaw CLI polls (circuit breaker) + enrich the memory hook | ✅ Shipped 2026-07-06 | `feat/mc-today-view` |
+| B | Today enrichment (ledger brief + Obsidian daily-note tasks + stalled flags) + System Mind panel (memory ledger + nightly dreaming) | ✅ Shipped 2026-07-06 | `feat/mc-today-view` |
+| C | Signals (RT trend queue), Projects (PROJECT-MEMORY registry + TASKS + CC activity), Content pipeline (corvus-dashboard :4321 proxy) | ✅ Shipped 2026-07-06 | `feat/mc-today-view` |
+| D | Automation schedule board (cron jobs + real status/failure badges) | ✅ Shipped 2026-07-06 | `feat/mc-today-view` |
+
+> **Deferred (needs a dedicated session):** Corvus scheduler/publisher launchd jobs 404 because corvus-dashboard is mid Express→SvelteKit migration (the running `:4321` process is the old Express `server.js`; the routes live in the un-served SvelteKit app). See `HANDOFF-FABLE5.md` §5 and the memory note `mission-control-rebuild-2026-07`.
+>
+> **2026-07-06 (Claude + Mike):** Rebuilt from a broken OpenClaw monitor into a daily operating picture (Phases A–D). Killed the 11K-error/1022-CPU-min failing-CLI-poll loop; fixed the memory-injection mount race + gateway log rotation (out-of-repo scripts). Commits `bf9c270`, `813f8d5`. Added `HANDOFF-FABLE5.md`.
 
 ## Phase 3 — Agent Observability
 
