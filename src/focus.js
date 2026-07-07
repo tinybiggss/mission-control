@@ -123,6 +123,135 @@ function pickFocus(tasks, today) {
   return { hero, next, lowEnergyPick, corvusPlate };
 }
 
+// ============================================================================
+// READERS (never throw)
+// ============================================================================
+
+function readLatestTaskData(dir) {
+  try {
+    const files = fs
+      .readdirSync(dir)
+      .filter((f) => /^\d{4}-\d{2}-\d{2}-tasks\.json$/.test(f))
+      .sort()
+      .reverse();
+    if (!files.length) return null;
+    return JSON.parse(fs.readFileSync(path.join(dir, files[0]), "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function readNorthStar(file) {
+  let vision = null;
+  try {
+    const raw = fs.readFileSync(file, "utf8");
+    const m = raw.match(/^\*\*"([\s\S]*?)"\*\*/m);
+    if (m) vision = m[1].replace(/\s+/g, " ").trim();
+  } catch {
+    // fall through — static buckets still returned
+  }
+  return { vision, buckets: BUCKETS.map((b) => ({ ...b })) };
+}
+
+// ============================================================================
+// COMPUTE
+// ============================================================================
+
+function todayISO() {
+  // Vault dates are America/Los_Angeles days
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+}
+
+function computeFocus(opts = {}) {
+  const taskDataDir = opts.taskDataDir || TASK_DATA_DIR;
+  const northStarFile = opts.northStarFile || NORTH_STAR_FILE;
+  const today = opts.today || todayISO();
+
+  const northStar = readNorthStar(northStarFile);
+  const data = readLatestTaskData(taskDataDir);
+  if (!data) {
+    return { available: false, northStar, asOf: new Date().toISOString() };
+  }
+
+  const open = (data.tasks || []).filter(
+    (t) => t && !t.is_completed && String(t.text || "").trim(),
+  );
+  const { hero, next, lowEnergyPick, corvusPlate } = pickFocus(data.tasks, today);
+
+  // Ladder today's open tasks (Mike's side) up to the North Star buckets
+  for (const b of northStar.buckets) b.taskCount = 0;
+  for (const t of open) {
+    if (t.assigned === "corvus") continue;
+    const key = bucketForProject(t.project);
+    const b = key && northStar.buckets.find((x) => x.key === key);
+    if (b) b.taskCount += 1;
+  }
+
+  return {
+    available: true,
+    date: data.date,
+    generatedAt: data.generated_at || null,
+    stale: data.date < today,
+    northStar,
+    now: {
+      hero: hero ? shapeTask(hero, today) : null,
+      next: next.map((t) => shapeTask(t, today)),
+    },
+    lowEnergyPick: lowEnergyPick ? shapeTask(lowEnergyPick, today) : null,
+    calendar: (data.calendar_events || []).slice(0, 6).map((e) => ({
+      title: e.title || "",
+      time: e.time || "",
+    })),
+    counts: {
+      open: open.length,
+      overdue: open.filter((t) => t.due && t.due <= today).length,
+      dueToday: open.filter((t) => t.due === today).length,
+      drifting: open.filter((t) => (t.postpone || 0) >= 10).length,
+      corvusPlate,
+    },
+    asOf: new Date().toISOString(),
+  };
+}
+
+// ============================================================================
+// CACHE + HTTP (house pattern — see src/system-mind.js)
+// ============================================================================
+
+function refreshFocusAsync(opts) {
+  if (cache.refreshing) return;
+  cache.refreshing = true;
+  try {
+    cache.data = computeFocus(opts);
+    cache.timestamp = Date.now();
+  } catch (e) {
+    console.error("[focus] compute failed:", e.message);
+  } finally {
+    cache.refreshing = false;
+  }
+}
+
+function getFocusCached(opts) {
+  if (!cache.data || Date.now() - cache.timestamp > TTL_MS) {
+    refreshFocusAsync(opts);
+  }
+  return cache.data || computeFocus(opts);
+}
+
+function createFocusAPI(deps = {}) {
+  const opts = {
+    taskDataDir: deps.taskDataDir,
+    northStarFile: deps.northStarFile,
+  };
+  return {
+    list(req, res) {
+      // Deps-injected instances (tests) bypass the module cache for isolation
+      const data = deps.taskDataDir ? computeFocus(opts) : getFocusCached(opts);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(data, null, 2));
+    },
+  };
+}
+
 module.exports = {
   scoreTask,
   cleanTaskText,
@@ -130,4 +259,9 @@ module.exports = {
   pickFocus,
   shapeTask,
   BUCKETS,
+  readLatestTaskData,
+  readNorthStar,
+  computeFocus,
+  createFocusAPI,
+  getFocusCached,
 };
