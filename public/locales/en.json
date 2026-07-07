@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "OpenClaw Command Center",
+    "title": "Mission Control",
     "connecting": "Connecting...",
     "connected": "🟢 Live",
     "disconnected": "🔴 Disconnected",
@@ -8,7 +8,7 @@
     "error": "🔴 Error"
   },
   "sidebar": {
-    "title": "Command Center",
+    "title": "Mission Control",
     "navigation": "Navigation",
     "settings": "Settings",
     "quickStats": "Quick Stats",
