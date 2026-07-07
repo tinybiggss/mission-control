@@ -3926,3 +3926,6 @@ details.mc-fold[open] > summary {
   color: var(--text);
   line-height: 1.45;
 }
+.mc-drift-due-picker[hidden] {
+  display: none;
+}
