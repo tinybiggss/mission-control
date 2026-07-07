@@ -76,6 +76,12 @@ function cronToHuman(expr) {
     return timeStr ? `${dayStr} at ${timeStr}` : `Every ${dayStr}`;
   }
 
+  // Every-N-days step syntax (e.g. */2) — parseInt would yield NaN below
+  if (/^\*\/\d+$/.test(dayOfMonth) && month === "*" && dayOfWeek === "*") {
+    const n = dayOfMonth.slice(2);
+    return timeStr ? `Every ${n} days at ${timeStr}` : `Every ${n} days`;
+  }
+
   // Specific day of month
   if (dayOfMonth !== "*" && month === "*" && dayOfWeek === "*") {
     const day = parseInt(dayOfMonth, 10);

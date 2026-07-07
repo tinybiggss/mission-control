@@ -77,3 +77,17 @@ describe("cron module", () => {
     });
   });
 });
+
+describe("cronToHuman step-day syntax (Phase 3 fix)", () => {
+  const { cronToHuman } = require("../src/cron");
+  const { it } = require("node:test");
+  const assert = require("node:assert");
+  it("renders */N day-of-month as every-N-days", () => {
+    assert.strictEqual(cronToHuman("0 12 */2 * *"), "Every 2 days at 12pm");
+    assert.strictEqual(cronToHuman("0 10 */3 * *"), "Every 3 days at 10am");
+  });
+  it("keeps existing behaviors", () => {
+    assert.match(cronToHuman("0 8 * * 1-5"), /Weekdays at 8am/);
+    assert.match(cronToHuman("0 9 15 * *"), /15th of month/);
+  });
+});
