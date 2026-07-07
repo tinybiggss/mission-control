@@ -190,6 +190,9 @@ function checkLedgerStubs() {
 
 /** A launchd curl job "last run" file is healthy only if it's parseable JSON
  *  indicating success. Currently it's an HTML "Cannot POST" error → red. */
+// Kept (currently unused): the live-run checker for scheduler/publisher.
+// Swap checkParkedJob back to this when roadmap stage 5 re-enables the crons.
+// eslint-disable-next-line no-unused-vars
 function checkCurlJob(id, label, filePath) {
   const st = statOrNull(filePath);
   if (!st) {
@@ -243,6 +246,35 @@ function checkCurlJob(id, label, filePath) {
     detail: success
       ? `Last run OK ${relAge(st.mtimeMs)}.`
       : `Last run reported not-ok ${relAge(st.mtimeMs)}.`,
+  };
+}
+
+// Scheduler/publisher are PARKED BY DESIGN (Mike, 2026-07-07): he's walking the
+// publishing workflow manually before automating it (Substack Notes daily →
+// automate Notes → other platforms → video → THEN scheduler). Their LaunchAgents
+// were unloaded+disabled that day. Parked = healthy; a run AFTER the park date
+// means something re-loaded a job that should be off — that's the failure now.
+const PARKED_SINCE_MS = Date.parse("2026-07-07T00:00:00-07:00");
+
+function checkParkedJob(id, label, filePath) {
+  const st = statOrNull(filePath);
+  if (st && st.mtimeMs > PARKED_SINCE_MS) {
+    return {
+      id,
+      label,
+      ok: false,
+      severity: "warn",
+      value: relAge(st.mtimeMs),
+      detail: `Parked job fired ${relAge(st.mtimeMs)} — its LaunchAgent should be unloaded (launchctl bootout + disable).`,
+    };
+  }
+  return {
+    id,
+    label,
+    ok: true,
+    severity: "warn",
+    value: "parked",
+    detail: "Parked by design — Mike is publishing manually first; automation returns at roadmap stage 5.",
   };
 }
 
@@ -304,8 +336,8 @@ function computeHealth() {
     checkMount(),
     checkMemoryInjection(),
     checkLedgerStubs(),
-    checkCurlJob("scheduler", "Corvus scheduler", SCHEDULER_LAST_RUN),
-    checkCurlJob("publisher", "Corvus publisher", PUBLISHER_LAST_RUN),
+    checkParkedJob("scheduler", "Corvus scheduler", SCHEDULER_LAST_RUN),
+    checkParkedJob("publisher", "Corvus publisher", PUBLISHER_LAST_RUN),
     checkGateway(),
     checkCliPolls(),
   ];
