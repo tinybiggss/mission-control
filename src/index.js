@@ -96,6 +96,8 @@ const { getOllamaUsageCached, refreshOllamaUsageAsync } = require("./ollama-usag
 const { createHealthAPI } = require("./health");
 const { createSystemMindAPI, getSystemMindCached } = require("./system-mind");
 const { createFocusAPI } = require("./focus");
+const { createNeedsYouAPI } = require("./needs-you");
+const { createDispatchAPI } = require("./dispatch");
 const { createProjectsAPI } = require("./projects");
 const { createSignalsAPI } = require("./signals");
 const { createContentAPI } = require("./corvus-proxy");
@@ -208,6 +210,10 @@ const systemMind = createSystemMindAPI({});
 
 // Mission Control Phase 1 (the flip): Focus Deck
 const focus = createFocusAPI({});
+
+// Mission Control Phase 2: Needs You inbox + Corvus dispatch
+const needsYou = createNeedsYouAPI({});
+const dispatchApi = createDispatchAPI({});
 
 // Mission Control Phase C: Projects, Signals, Content pipeline
 const projects = createProjectsAPI({});
@@ -803,6 +809,12 @@ const server = http.createServer((req, res) => {
   // ---- Phase 1 (the flip): Focus Deck ----
   else if (pathname === "/api/mission/focus" && req.method === "GET") {
     focus.list(req, res);
+  }
+  // ---- Phase 2: Needs You inbox + Corvus dispatch ----
+  else if (pathname === "/api/mission/needs-you" && req.method === "GET") {
+    needsYou.list(req, res);
+  } else if (pathname === "/api/mission/dispatch" && req.method === "POST") {
+    dispatchApi.dispatch(req, res);
   }
   // ---- Phase C: Projects, Signals, Content ----
   else if (pathname === "/api/mission/dev-projects" && req.method === "GET") {
