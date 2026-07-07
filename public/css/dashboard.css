@@ -3545,3 +3545,158 @@ main {
 .mc-sched-disabled {
   opacity: 0.5;
 }
+
+/* ============================================================
+   Focus Deck (Phase 1 — the flip)
+   ============================================================ */
+.mc-focus-section {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+  background: var(--card-bg);
+}
+.mc-focus-northstar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.mc-focus-bucket {
+  font-size: 0.78rem;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.mc-focus-bucket.has-tasks {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.mc-focus-bucket b {
+  color: var(--accent);
+}
+.mc-focus-corvus {
+  opacity: 0.85;
+}
+.mc-focus-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 20px;
+}
+@media (max-width: 900px) {
+  .mc-focus-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.mc-focus-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.mc-focus-label-sub {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin: 12px 0 4px;
+}
+.mc-focus-hero {
+  border-left: 3px solid var(--accent);
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.mc-focus-hero-text {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.mc-focus-hero-meta,
+.mc-focus-next-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+.mc-focus-next-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0 6px 14px;
+  border-left: 2px solid var(--border);
+  margin-top: 2px;
+}
+.mc-focus-next-text {
+  font-size: 0.92rem;
+}
+.mc-focus-overdue {
+  color: var(--red, #e5534b);
+}
+.mc-focus-drift {
+  color: var(--yellow, #d29922);
+}
+.mc-focus-le {
+  margin-top: 12px;
+}
+.mc-focus-le summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.mc-focus-calendar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mc-focus-cal-item {
+  font-size: 0.85rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.mc-focus-cal-item span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.mc-focus-counts {
+  display: flex;
+  gap: 14px;
+  margin-top: 14px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.mc-focus-foot {
+  margin-top: 10px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.mc-focus-stale {
+  color: var(--yellow, #d29922);
+}
+.mc-focus-empty {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+.mc-focus-open {
+  font-size: 0.78rem;
+  margin-left: 8px;
+}
+
+/* Demoted panel groups (the fold) */
+details.mc-fold {
+  margin: 14px 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0 14px;
+}
+details.mc-fold > summary {
+  cursor: pointer;
+  padding: 12px 2px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  user-select: none;
+}
+details.mc-fold[open] > summary {
+  color: var(--text);
+}
