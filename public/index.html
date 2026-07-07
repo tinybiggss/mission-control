@@ -147,34 +147,47 @@
         <!-- Mission Control: Health / Ops self-monitor (Phase A) -->
         <div id="mc-health-container"></div>
 
-        <!-- Mission Control: Three custom panels (Phase 1) -->
-        <div id="mission-control-container"></div>
+        <!-- The fold: detail panels demoted below the Focus Deck (Phase 1 — the flip) -->
+        <details class="mc-fold" id="mc-fold-panels">
+          <summary>
+            🗂 Detail panels — tasks, memory, signals, projects, content, agents, schedule
+          </summary>
 
-        <!-- Mission Control: Today view (Phase 4) -->
-        <div id="mc-today-container"></div>
+          <!-- Mission Control: Three custom panels (Phase 1) -->
+          <div id="mission-control-container"></div>
 
-        <!-- Mission Control: The System Mind (Phase B) -->
-        <div id="mc-system-mind-container"></div>
+          <!-- Mission Control: Today view (Phase 4) -->
+          <div id="mc-today-container"></div>
 
-        <!-- Mission Control: Signals / Research (Phase C) -->
-        <div id="mc-signals-container"></div>
+          <!-- Mission Control: The System Mind (Phase B) -->
+          <div id="mc-system-mind-container"></div>
 
-        <!-- Mission Control: Projects (Phase C) -->
-        <div id="mc-projects-container"></div>
+          <!-- Mission Control: Signals / Research (Phase C) -->
+          <div id="mc-signals-container"></div>
 
-        <!-- Mission Control: Content pipeline (Phase C) -->
-        <div id="mc-content-container"></div>
+          <!-- Mission Control: Projects (Phase C) -->
+          <div id="mc-projects-container"></div>
 
-        <!-- Mission Control: Outstanding view (Phase 4) -->
-        <div id="mc-outstanding-container"></div>
+          <!-- Mission Control: Content pipeline (Phase C) -->
+          <div id="mc-content-container"></div>
 
-        <!-- Mission Control: Agent Observability (Phase 3) -->
-        <div id="agents-panel-container"></div>
+          <!-- Mission Control: Outstanding view (Phase 4) -->
+          <div id="mc-outstanding-container"></div>
 
-        <!-- Mission Control: Automation schedule board (Phase D) -->
-        <div id="mc-schedule-container"></div>
+          <!-- Mission Control: Agent Observability (Phase 3) -->
+          <div id="agents-panel-container"></div>
 
-        <!-- System Vitals Section -->
+          <!-- Mission Control: Automation schedule board (Phase D) -->
+          <div id="mc-schedule-container"></div>
+        </details>
+
+        <!-- The fold: stock OpenClaw panels, quarantined but reachable -->
+        <details class="mc-fold" id="mc-fold-openclaw">
+          <summary>
+            🦞 OpenClaw internals — vitals, LLM usage, sessions, cron, memory, cerebro, operators
+          </summary>
+
+          <!-- System Vitals Section -->
         <div class="section" id="vitals-section">
           <div class="vitals-panel">
             <div class="vitals-header">
@@ -1350,6 +1363,7 @@
             </div>
           </div>
         </div>
+        </details>
       </main>
 
       <div class="refresh-bar">

@@ -120,6 +120,12 @@
           e.preventDefault();
           const target = document.querySelector(targetHash);
           if (target) {
+            // Sections may live inside a collapsed fold (details.mc-fold)
+            let fold = target.closest("details");
+            while (fold) {
+              fold.open = true;
+              fold = fold.parentElement && fold.parentElement.closest("details");
+            }
             target.scrollIntoView({ behavior: "smooth" });
             history.pushState(null, "", targetHash);
             setActiveNavItem();
