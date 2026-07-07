@@ -19,11 +19,11 @@
     partialLoaded: false,
   };
 
-  async function fetchJson(url) {
+  async function fetchJson(url, opts) {
     try {
-      const res = await fetch(url, { headers: { "Content-Type": "application/json" } });
-      if (!res.ok) return null;
-      return await res.json();
+      const res = await fetch(url, opts || { headers: { "Content-Type": "application/json" } });
+      if (!res.ok && res.status >= 500) return null;
+      return await res.json(); // drift/action returns JSON error envelopes on 4xx
     } catch (e) {
       console.error("[Focus]", url, e);
       return null;
@@ -143,6 +143,7 @@
         .join("") || '<div class="mc-focus-empty">No meetings today 🎉</div>';
 
     const c = s.counts || {};
+    updateDriftSummary(c);
     document.getElementById("mc-focus-counts").innerHTML = `
       <span title="Open tasks on the plate">${c.open || 0} open</span>
       <span class="${c.overdue ? "mc-focus-overdue" : ""}">${c.overdue || 0} overdue</span>
@@ -153,6 +154,97 @@
       src.textContent =
         `from task-rollover ${s.date}` + (s.stale ? " — STALE (no sidecar for today yet)" : "");
       src.className = s.stale ? "mc-focus-stale" : "";
+    }
+  }
+
+  // ---------------------------------------------------------------------
+  // Drift Meter (Phase 4): triage ↩10+ tasks — real date / delegate / drop.
+  // Lazy-loads /api/mission/drift when the details element is first opened.
+  // ---------------------------------------------------------------------
+
+  const Drift = { loaded: false };
+
+  async function loadDrift() {
+    const list = document.getElementById("mc-drift-list");
+    if (!list) return;
+    const data = await fetchJson("/api/mission/drift");
+    if (!data) {
+      list.innerHTML = '<div class="mc-focus-empty">Failed to load drifting tasks.</div>';
+      return;
+    }
+    Drift.loaded = true;
+    list.innerHTML = data.tasks.length
+      ? data.tasks.map(driftRowHtml).join("")
+      : '<div class="mc-focus-empty">Nothing drifting — the plate is honest 🎉</div>';
+  }
+
+  function driftRowHtml(t) {
+    return `
+      <div class="mc-drift-row" data-task="${esc(t.text)}">
+        <span class="mc-drift-count">↩ ${t.postpone}×</span>
+        <span class="mc-drift-text">${esc(t.text)}
+          <span class="mc-focus-next-meta">${t.due ? `due ${esc(t.due)} · ` : ""}${esc(t.project)}</span>
+        </span>
+        <span class="mc-drift-actions">
+          <button class="mc-drift-btn" data-act="set-due" title="Give it a real date">📅</button>
+          <button class="mc-drift-btn" data-act="delegate" title="Hand to Corvus (raises at next standup)">🐦‍⬛</button>
+          <button class="mc-drift-btn" data-act="drop" title="Formally drop — cancels the task">✖</button>
+          <span class="mc-drift-due-picker" hidden>
+            <input type="date" class="mc-drift-date" />
+            <button class="mc-drift-btn" data-act="confirm-due">✓</button>
+          </span>
+        </span>
+      </div>`;
+  }
+
+  async function postDriftAction(row, action, due) {
+    const body = { task: row.dataset.task, action };
+    if (due) body.due = due;
+    const result = await fetchJson("/api/mission/drift/action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (result && result.ok) {
+      row.classList.add("mc-drift-done");
+      const label = { "set-due": `due ${due} ✓`, delegate: "delegated to Corvus ✓", drop: "dropped ✓" }[action];
+      row.querySelector(".mc-drift-actions").innerHTML = `<span class="mc-drift-result">${label}</span>`;
+      refresh(); // hero/next/counts may have changed
+    } else {
+      const msg = (result && result.error) || "failed — try in Obsidian";
+      row.querySelector(".mc-drift-actions").innerHTML = `<span class="mc-drift-result mc-focus-overdue">${esc(msg)}</span>`;
+    }
+  }
+
+  function wireDrift(container) {
+    const details = container.querySelector("#mc-focus-drift") || document.getElementById("mc-focus-drift");
+    if (!details) return;
+    details.addEventListener("toggle", () => {
+      if (details.open && !Drift.loaded) loadDrift();
+    });
+    details.addEventListener("click", (e) => {
+      const btn = e.target.closest(".mc-drift-btn");
+      if (!btn) return;
+      const row = btn.closest(".mc-drift-row");
+      const act = btn.dataset.act;
+      if (act === "set-due") {
+        const picker = row.querySelector(".mc-drift-due-picker");
+        picker.hidden = !picker.hidden;
+      } else if (act === "confirm-due") {
+        const due = row.querySelector(".mc-drift-date").value;
+        if (due) postDriftAction(row, "set-due", due);
+      } else if (act === "delegate" || act === "drop") {
+        postDriftAction(row, act);
+      }
+    });
+  }
+
+  function updateDriftSummary(counts) {
+    const summary = document.getElementById("mc-drift-summary");
+    if (summary && counts) {
+      summary.textContent = counts.drifting
+        ? `🎯 ${counts.drifting} drifting ↩10+ — triage ▾`
+        : "no drifting tasks 🎉";
     }
   }
 
@@ -175,6 +267,7 @@
     if (!container) return;
     await injectPartial(container);
     wireDispatchClicks(container);
+    wireDrift(container);
     await refresh();
     if (Focus.pollInterval) clearInterval(Focus.pollInterval);
     Focus.pollInterval = setInterval(refresh, Focus.POLL_MS);

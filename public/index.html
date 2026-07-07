@@ -147,6 +147,9 @@
         <!-- Mission Control: Needs You decision inbox (Phase 2) -->
         <div id="mc-needs-container"></div>
 
+        <!-- Mission Control: Overnight brief (Phase 4) -->
+        <div id="mc-overnight-container"></div>
+
         <!-- Mission Control: Health / Ops self-monitor (Phase A) -->
         <div id="mc-health-container"></div>
 
@@ -1724,6 +1727,7 @@
 
     <script src="js/focus.js"></script>
     <script src="js/needs-you.js"></script>
+    <script src="js/overnight.js"></script>
     <script src="js/mission-control.js"></script>
     <script src="js/today.js"></script>
     <script src="js/outstanding.js"></script>
@@ -1745,6 +1749,9 @@
         }
         if (typeof window.MC_NeedsInit === "function") {
           window.MC_NeedsInit("mc-needs-container");
+        }
+        if (typeof window.MC_OvernightInit === "function") {
+          window.MC_OvernightInit("mc-overnight-container");
         }
         if (typeof window.MC_HealthInit === "function") {
           window.MC_HealthInit("mc-health-container");

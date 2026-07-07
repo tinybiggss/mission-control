@@ -3808,3 +3808,121 @@ details.mc-fold[open] > summary {
 .mc-focus-dispatch:hover {
   border-color: var(--accent);
 }
+
+/* ============================================================
+   Phase 4 — Drift Meter + Overnight brief
+   ============================================================ */
+.mc-drift {
+  margin-top: 14px;
+}
+.mc-drift > summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--yellow, #d29922);
+  user-select: none;
+}
+.mc-drift-list {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mc-drift-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background: rgba(210, 153, 34, 0.05);
+}
+.mc-drift-row.mc-drift-done {
+  opacity: 0.55;
+}
+.mc-drift-row.mc-drift-done .mc-drift-text {
+  text-decoration: line-through;
+}
+.mc-drift-count {
+  flex: 0 0 auto;
+  color: var(--yellow, #d29922);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+}
+.mc-drift-text {
+  flex: 1;
+  min-width: 0;
+}
+.mc-drift-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.mc-drift-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.78rem;
+  padding: 1px 7px;
+  cursor: pointer;
+}
+.mc-drift-btn:hover {
+  border-color: var(--accent);
+}
+.mc-drift-due-picker {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+.mc-drift-date {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  padding: 1px 4px;
+}
+.mc-drift-result {
+  font-size: 0.78rem;
+  color: var(--green, #3fb950);
+  white-space: nowrap;
+}
+.mc-overnight {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 20px;
+  margin-bottom: 16px;
+  background: var(--card-bg);
+}
+.mc-overnight-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+.mc-overnight-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.mc-overnight-more {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.mc-overnight-more:hover {
+  color: var(--accent);
+}
+.mc-overnight-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.mc-overnight-lines li {
+  font-size: 0.85rem;
+  color: var(--text);
+  line-height: 1.45;
+}
