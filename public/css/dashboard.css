@@ -3929,3 +3929,107 @@ details.mc-fold[open] > summary {
 .mc-drift-due-picker[hidden] {
   display: none;
 }
+
+/* ============================================================
+   Phase 3 — Unified Ops Registry
+   ============================================================ */
+.mc-ops {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0 20px;
+  margin-bottom: 16px;
+  background: var(--card-bg);
+}
+.mc-ops-strip {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 0;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+.mc-ops-strip::-webkit-details-marker {
+  display: none;
+}
+.mc-ops-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+.mc-ops-summary {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  flex: 1;
+  min-width: 0;
+}
+.mc-ops-failing {
+  color: var(--red, #e5534b);
+}
+.mc-ops-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  flex: 0 0 auto;
+}
+.mc-ops-timeline {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.mc-ops-board {
+  padding: 8px 0 14px;
+}
+.mc-ops-group {
+  margin-top: 10px;
+}
+.mc-ops-group-title {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.mc-ops-row {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 0.82rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.mc-ops-row.mc-ops-failing-row,
+.mc-ops-row.mc-ops-failing {
+  background: rgba(229, 83, 75, 0.08);
+}
+.mc-ops-row.mc-ops-parked,
+.mc-ops-row.mc-ops-disabled {
+  opacity: 0.6;
+}
+.mc-ops-dot {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+}
+.mc-ops-name {
+  flex: 0 0 auto;
+  min-width: 220px;
+  font-variant-numeric: tabular-nums;
+}
+.mc-ops-sched {
+  flex: 0 0 auto;
+  min-width: 160px;
+  color: var(--text-muted);
+}
+.mc-ops-detail {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mc-ops-source-err {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--yellow, #d29922);
+}

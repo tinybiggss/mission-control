@@ -153,6 +153,9 @@
         <!-- Mission Control: Health / Ops self-monitor (Phase A) -->
         <div id="mc-health-container"></div>
 
+        <!-- Mission Control: Unified ops registry (Phase 3) -->
+        <div id="mc-ops-container"></div>
+
         <!-- The fold: detail panels demoted below the Focus Deck (Phase 1 — the flip) -->
         <details class="mc-fold" id="mc-fold-panels">
           <summary>
@@ -183,8 +186,8 @@
           <!-- Mission Control: Agent Observability (Phase 3) -->
           <div id="agents-panel-container"></div>
 
-          <!-- Mission Control: Automation schedule board (Phase D) -->
-          <div id="mc-schedule-container"></div>
+          <!-- Automation schedule board (Phase D) retired — superseded by the
+               unified ops registry strip (mc-ops-container) on the main screen -->
         </details>
 
         <!-- The fold: stock OpenClaw panels, quarantined but reachable -->
@@ -1737,7 +1740,7 @@
     <script src="js/signals.js"></script>
     <script src="js/projects.js"></script>
     <script src="js/content.js"></script>
-    <script src="js/schedule.js"></script>
+    <script src="js/ops.js"></script>
 
     <script>
       // Auto-init Today + Outstanding if their containers are present.
@@ -1771,8 +1774,8 @@
         if (typeof window.MC_ContentInit === "function") {
           window.MC_ContentInit("mc-content-container");
         }
-        if (typeof window.MC_ScheduleInit === "function") {
-          window.MC_ScheduleInit("mc-schedule-container");
+        if (typeof window.MC_OpsInit === "function") {
+          window.MC_OpsInit("mc-ops-container");
         }
         if (typeof window.MC_OutstandingInit === "function") {
           window.MC_OutstandingInit("mc-outstanding-container");
