@@ -64,6 +64,12 @@
     return bits.join(" · ");
   }
 
+  function dispatchBtnHtml(t) {
+    // One click = "research: <task>" into Corvus's capture queue (needs-you.js
+    // defines window.MC_Dispatch; the next heartbeat picks the entry up).
+    return `<button class="mc-focus-dispatch" data-text="${esc(t.text)}" title="Send to Corvus as overnight research">→ Corvus</button>`;
+  }
+
   function heroHtml(t) {
     if (!t) return '<div class="mc-focus-empty">Nothing on the plate — check the sidecar.</div>';
     const open = t.obsidianUri
@@ -71,7 +77,7 @@
       : "";
     return `
       <div class="mc-focus-hero-text">${esc(t.text)}</div>
-      <div class="mc-focus-hero-meta">${taskMetaHtml(t)} ${open}</div>`;
+      <div class="mc-focus-hero-meta">${taskMetaHtml(t)} ${open} ${dispatchBtnHtml(t)}</div>`;
   }
 
   function nextHtml(next) {
@@ -83,7 +89,7 @@
           (t) => `
         <div class="mc-focus-next-item">
           <span class="mc-focus-next-text">${esc(t.text)}</span>
-          <span class="mc-focus-next-meta">${taskMetaHtml(t)}</span>
+          <span class="mc-focus-next-meta">${taskMetaHtml(t)} ${dispatchBtnHtml(t)}</span>
         </div>`,
         )
         .join("")
@@ -150,10 +156,25 @@
     }
   }
 
+  function wireDispatchClicks(container) {
+    container.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".mc-focus-dispatch");
+      if (!btn || typeof window.MC_Dispatch !== "function") return;
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "…";
+      const result = await window.MC_Dispatch("research", btn.dataset.text, "Focus Deck task");
+      btn.disabled = false;
+      btn.textContent = result && result.ok ? "queued ✓" : "failed ✗";
+      setTimeout(() => (btn.textContent = original), 3000);
+    });
+  }
+
   window.MC_FocusInit = async function (containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
     await injectPartial(container);
+    wireDispatchClicks(container);
     await refresh();
     if (Focus.pollInterval) clearInterval(Focus.pollInterval);
     Focus.pollInterval = setInterval(refresh, Focus.POLL_MS);

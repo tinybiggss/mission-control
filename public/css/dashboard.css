@@ -3700,3 +3700,111 @@ details.mc-fold > summary {
 details.mc-fold[open] > summary {
   color: var(--text);
 }
+
+/* ============================================================
+   Needs You (Phase 2 — the decision inbox)
+   ============================================================ */
+.mc-needs-section {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 20px;
+  margin-bottom: 16px;
+  background: var(--card-bg);
+}
+.mc-needs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.mc-needs-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.mc-needs-count {
+  color: var(--accent);
+}
+.mc-needs-dispatch {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+  min-width: 260px;
+  max-width: 560px;
+}
+.mc-needs-dispatch select,
+.mc-needs-dispatch input,
+.mc-needs-dispatch button {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  padding: 5px 8px;
+}
+.mc-needs-dispatch input {
+  flex: 1;
+}
+.mc-needs-dispatch button {
+  cursor: pointer;
+  white-space: nowrap;
+  color: var(--accent);
+}
+.mc-needs-dispatch button:hover {
+  border-color: var(--accent);
+}
+.mc-needs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mc-needs-item {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+.mc-needs-item.mc-needs-error {
+  background: rgba(229, 83, 75, 0.08);
+}
+.mc-needs-item.mc-needs-warn {
+  background: rgba(210, 153, 34, 0.08);
+}
+.mc-needs-icon {
+  flex: 0 0 auto;
+}
+.mc-needs-text {
+  min-width: 0;
+}
+.mc-needs-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  color: var(--yellow, #d29922);
+  border: 1px solid var(--yellow, #d29922);
+  border-radius: 999px;
+  padding: 0 8px;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+.mc-needs-dim {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.mc-focus-dispatch {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  padding: 1px 8px;
+  cursor: pointer;
+  margin-left: 6px;
+}
+.mc-focus-dispatch:hover {
+  border-color: var(--accent);
+}

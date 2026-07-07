@@ -144,6 +144,9 @@
         <!-- Mission Control: Focus Deck (Phase 1 — the flip) -->
         <div id="mc-focus-container"></div>
 
+        <!-- Mission Control: Needs You decision inbox (Phase 2) -->
+        <div id="mc-needs-container"></div>
+
         <!-- Mission Control: Health / Ops self-monitor (Phase A) -->
         <div id="mc-health-container"></div>
 
@@ -1720,6 +1723,7 @@
     </div>
 
     <script src="js/focus.js"></script>
+    <script src="js/needs-you.js"></script>
     <script src="js/mission-control.js"></script>
     <script src="js/today.js"></script>
     <script src="js/outstanding.js"></script>
@@ -1738,6 +1742,9 @@
       document.addEventListener("DOMContentLoaded", () => {
         if (typeof window.MC_FocusInit === "function") {
           window.MC_FocusInit("mc-focus-container");
+        }
+        if (typeof window.MC_NeedsInit === "function") {
+          window.MC_NeedsInit("mc-needs-container");
         }
         if (typeof window.MC_HealthInit === "function") {
           window.MC_HealthInit("mc-health-container");

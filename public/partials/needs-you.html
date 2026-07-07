@@ -1,0 +1,23 @@
+<!-- Needs You (Phase 2 — the decision inbox). Injected by js/needs-you.js -->
+<div class="section mc-needs-section" id="mc-needs-section">
+  <div class="mc-needs-header">
+    <div class="mc-needs-title">⚡ Needs You <span id="mc-needs-count" class="mc-needs-count"></span></div>
+    <div class="mc-needs-dispatch">
+      <select id="mc-dispatch-intent" title="capture = standup topic · research = Corvus digs in overnight · draft = Corvus just does it">
+        <option value="capture">capture</option>
+        <option value="research" selected>research</option>
+        <option value="draft">draft</option>
+      </select>
+      <input
+        id="mc-dispatch-text"
+        type="text"
+        maxlength="2000"
+        placeholder="Send anything to Corvus — next heartbeat picks it up"
+      />
+      <button id="mc-dispatch-send">→ Corvus</button>
+    </div>
+  </div>
+  <div id="mc-needs-list" class="mc-needs-list">
+    <div class="mc-focus-empty">Loading…</div>
+  </div>
+</div>
