@@ -95,6 +95,7 @@ const { createAgentsAPI } = require("./agents");
 const { getOllamaUsageCached, refreshOllamaUsageAsync } = require("./ollama-usage");
 const { createHealthAPI } = require("./health");
 const { createSystemMindAPI, getSystemMindCached } = require("./system-mind");
+const { createFocusAPI } = require("./focus");
 const { createProjectsAPI } = require("./projects");
 const { createSignalsAPI } = require("./signals");
 const { createContentAPI } = require("./corvus-proxy");
@@ -204,6 +205,9 @@ const health = createHealthAPI({
 
 // Mission Control Phase B: The System Mind (memory ledger feed)
 const systemMind = createSystemMindAPI({});
+
+// Mission Control Phase 1 (the flip): Focus Deck
+const focus = createFocusAPI({});
 
 // Mission Control Phase C: Projects, Signals, Content pipeline
 const projects = createProjectsAPI({});
@@ -795,6 +799,10 @@ const server = http.createServer((req, res) => {
   // ---- Phase B: The System Mind (memory ledger) ----
   else if (pathname === "/api/mission/system-mind" && req.method === "GET") {
     systemMind.list(req, res);
+  }
+  // ---- Phase 1 (the flip): Focus Deck ----
+  else if (pathname === "/api/mission/focus" && req.method === "GET") {
+    focus.list(req, res);
   }
   // ---- Phase C: Projects, Signals, Content ----
   else if (pathname === "/api/mission/dev-projects" && req.method === "GET") {

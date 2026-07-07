@@ -70,9 +70,16 @@ function scoreTask(t, today) {
 function cleanTaskText(text) {
   return String(text || "")
     .replace(/\*\*/g, "")
+    .replace(/\[↩::\s*\d+\]/g, "")
     .replace(/[🔺⏫🔼🔽]/gu, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+// A task is "real" only if something remains after stripping metadata —
+// the vault contains orphan rows like "- [ ] [↩:: 1] 📅 2026-07-05".
+function hasRealText(t) {
+  return Boolean(t && cleanTaskText(t.text));
 }
 
 function bucketForProject(project) {
@@ -101,7 +108,7 @@ function shapeTask(t, today) {
 }
 
 function pickFocus(tasks, today) {
-  const open = (tasks || []).filter((t) => t && !t.is_completed && String(t.text || "").trim());
+  const open = (tasks || []).filter((t) => t && !t.is_completed && hasRealText(t));
   const mine = open.filter((t) => t.assigned !== "corvus");
   const corvusPlate = open.length - mine.length;
 
@@ -173,9 +180,7 @@ function computeFocus(opts = {}) {
     return { available: false, northStar, asOf: new Date().toISOString() };
   }
 
-  const open = (data.tasks || []).filter(
-    (t) => t && !t.is_completed && String(t.text || "").trim(),
-  );
+  const open = (data.tasks || []).filter((t) => t && !t.is_completed && hasRealText(t));
   const { hero, next, lowEnergyPick, corvusPlate } = pickFocus(data.tasks, today);
 
   // Ladder today's open tasks (Mike's side) up to the North Star buckets

@@ -72,6 +72,23 @@ describe("cleanTaskText", () => {
     assert.strictEqual(cleanTaskText("**Review GHN course** — gaps 🔼"), "Review GHN course — gaps");
     assert.strictEqual(cleanTaskText("plain text"), "plain text");
   });
+  it("strips postponement markers so metadata-only rows clean to empty", () => {
+    assert.strictEqual(cleanTaskText("[↩:: 1]"), "");
+    assert.strictEqual(cleanTaskText("real task [↩:: 12]"), "real task");
+  });
+});
+
+describe("pickFocus metadata-only rows", () => {
+  it("never surfaces tasks whose text is only metadata", () => {
+    const tasks = [
+      T({ text: "[↩:: 1]", priority: "🔽" }),
+      T({ text: "**real** 🔺", priority: "🔺" }),
+    ];
+    const { hero, next, lowEnergyPick } = pickFocus(tasks, "2026-07-06");
+    assert.match(hero.text, /real/);
+    assert.strictEqual(next.length, 0);
+    assert.strictEqual(lowEnergyPick, null);
+  });
 });
 
 describe("bucketForProject", () => {
