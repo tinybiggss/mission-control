@@ -98,6 +98,8 @@ const { createSystemMindAPI, getSystemMindCached } = require("./system-mind");
 const { createFocusAPI } = require("./focus");
 const { createNeedsYouAPI } = require("./needs-you");
 const { createDispatchAPI } = require("./dispatch");
+const { createDriftAPI } = require("./drift");
+const { createOvernightAPI } = require("./overnight");
 const { createProjectsAPI } = require("./projects");
 const { createSignalsAPI } = require("./signals");
 const { createContentAPI } = require("./corvus-proxy");
@@ -214,6 +216,10 @@ const focus = createFocusAPI({});
 // Mission Control Phase 2: Needs You inbox + Corvus dispatch
 const needsYou = createNeedsYouAPI({});
 const dispatchApi = createDispatchAPI({});
+
+// Mission Control Phase 4: Drift Meter + Overnight brief
+const drift = createDriftAPI({});
+const overnight = createOvernightAPI({});
 
 // Mission Control Phase C: Projects, Signals, Content pipeline
 const projects = createProjectsAPI({});
@@ -815,6 +821,14 @@ const server = http.createServer((req, res) => {
     needsYou.list(req, res);
   } else if (pathname === "/api/mission/dispatch" && req.method === "POST") {
     dispatchApi.dispatch(req, res);
+  }
+  // ---- Phase 4: Drift Meter + Overnight brief ----
+  else if (pathname === "/api/mission/drift" && req.method === "GET") {
+    drift.list(req, res);
+  } else if (pathname === "/api/mission/drift/action" && req.method === "POST") {
+    drift.action(req, res);
+  } else if (pathname === "/api/mission/overnight" && req.method === "GET") {
+    overnight.list(req, res);
   }
   // ---- Phase C: Projects, Signals, Content ----
   else if (pathname === "/api/mission/dev-projects" && req.method === "GET") {
