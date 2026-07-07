@@ -160,6 +160,17 @@ describe("computeOps + createOpsAPI", () => {
     assert.strictEqual(r.summary.running, 1);
     assert.ok(r.sources.crontab === "ok");
   });
+  it("dedupes LaunchAgents sharing one label and flags the duplicate plist", () => {
+    const r = computeOps({
+      ...deps,
+      listPlists: () => [
+        { label: "local.mike.thing", plist: { KeepAlive: true } },
+        { label: "local.mike.thing", plist: {} },
+      ],
+    });
+    assert.strictEqual(r.groups.launchAgents.length, 1);
+    assert.match(r.groups.launchAgents[0].detail, /2 plist files share this label/);
+  });
   it("degrades per-source without throwing", () => {
     const r = computeOps({ ...deps, readCrontabText: () => { throw new Error("no crontab"); } });
     assert.strictEqual(r.groups.crontab.length, 0);

@@ -262,9 +262,19 @@ function computeOps(deps = {}) {
   let launchAgents = [];
   try {
     const lcMap = parseLaunchctlList(readLaunchctl() || "");
-    launchAgents = (listPlists() || []).map(({ label, plist }) =>
-      shapeLaunchAgent(label, plist, lcMap[label], PARKED_LABELS),
-    );
+    // Two plist FILES can declare the same Label (launchd only honors one) —
+    // e.g. the stray launchagent-task-rollover.plist duplicate. Dedupe and say so.
+    const byLabel = new Map();
+    for (const { label, plist } of listPlists() || []) {
+      byLabel.set(label, (byLabel.get(label) || []).concat([plist]));
+    }
+    launchAgents = [...byLabel.entries()].map(([label, plists]) => {
+      const item = shapeLaunchAgent(label, plists[0], lcMap[label], PARKED_LABELS);
+      if (plists.length > 1) {
+        item.detail = `${item.detail ? item.detail + " · " : ""}⚠ ${plists.length} plist files share this label — remove the duplicate`;
+      }
+      return item;
+    });
   } catch (e) {
     sources.launchAgents = e.message;
   }

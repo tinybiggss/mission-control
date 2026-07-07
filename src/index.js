@@ -100,6 +100,7 @@ const { createNeedsYouAPI } = require("./needs-you");
 const { createDispatchAPI } = require("./dispatch");
 const { createDriftAPI } = require("./drift");
 const { createOvernightAPI } = require("./overnight");
+const { createOpsAPI } = require("./ops-registry");
 const { createProjectsAPI } = require("./projects");
 const { createSignalsAPI } = require("./signals");
 const { createContentAPI } = require("./corvus-proxy");
@@ -220,6 +221,9 @@ const dispatchApi = createDispatchAPI({});
 // Mission Control Phase 4: Drift Meter + Overnight brief
 const drift = createDriftAPI({});
 const overnight = createOvernightAPI({});
+
+// Mission Control Phase 3: Unified ops registry
+const ops = createOpsAPI({});
 
 // Mission Control Phase C: Projects, Signals, Content pipeline
 const projects = createProjectsAPI({});
@@ -829,6 +833,10 @@ const server = http.createServer((req, res) => {
     drift.action(req, res);
   } else if (pathname === "/api/mission/overnight" && req.method === "GET") {
     overnight.list(req, res);
+  }
+  // ---- Phase 3: Unified ops registry ----
+  else if (pathname === "/api/mission/ops" && req.method === "GET") {
+    ops.list(req, res);
   }
   // ---- Phase C: Projects, Signals, Content ----
   else if (pathname === "/api/mission/dev-projects" && req.method === "GET") {
